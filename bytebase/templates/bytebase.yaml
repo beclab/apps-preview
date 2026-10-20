@@ -1,0 +1,125 @@
+﻿{{- $bytebaseDomainENV := split  ","  .Values.domain.bytebase -}}
+{{- $bytebaseDomain := index $bytebaseDomainENV "_0" -}}
+---
+# Source: bytebase/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: bytebase-entrypoint
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: bytebase
+    app.kubernetes.io/version: 3.11.0
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: LoadBalancer
+  selector:
+    app: bytebase
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+# Source: bytebase/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bytebase
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: bytebase
+    app.kubernetes.io/version: 3.11.0
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app: bytebase
+  serviceName: "bytebase"
+  replicas: {{ .Values.workloads.bytebase.replicaCount }}
+  strategy:
+    type: Recreate
+  updateStrategy:
+    type: OnDelete
+  template:
+    metadata:
+      labels:
+        app: bytebase
+    spec:
+      containers:
+        - name: bytebase
+          image: "docker.io/beclab/bytebase-bytebase:3.14.0"
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
+            limits:
+              cpu: "3"
+              memory: 3Gi
+          env:
+          # If user specifies the external pg connection string directly, we should use that.
+          - name: PG_URL
+            value: postgresql://{{ .Values.postgres.username }}:{{ .Values.postgres.password }}@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.databases.bytebase }}
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              exec bytebase \
+              --data \
+              "/var/opt/bytebase" \
+              --port \
+              "8080" \
+              --external-url \
+              "https://{{ $bytebaseDomain }}" \
+          ports:
+            - containerPort: 8080
+              name: web
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - mountPath: /var/opt/bytebase
+              # Either user disable persistence or enable persistence but not specify an existing PVC, use "bytebase-volume" as the volume name. It means
+              # that we will request to create a PVC with the specified storage class with name "bytebase-volume".
+              name: bytebase-volume
+            - mountPath: /mnt/bytebase-shared-volume
+              name: bytebase-shared-volume
+      volumes:
+      - hostPath:
+          {{- if .Values.sysVersion }}
+            {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+          path: '{{ .Values.userspace.appData }}/data'
+            {{- else }}
+          path: '{{ .Values.userspace.appData }}/bytebase/data'
+            {{- end }}
+          {{- else }}
+          path: '{{ .Values.userspace.appData }}/bytebase/data'
+          {{- end }}
+          type: DirectoryOrCreate
+        name: bytebase-volume
+      - hostPath:
+          {{- if .Values.sysVersion }}
+            {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+          path: '{{ .Values.userspace.appData }}/shared/data'
+            {{- else }}
+          path: '{{ .Values.userspace.appData }}/bytebase/shared/data'
+            {{- end }}
+          {{- else }}
+          path: '{{ .Values.userspace.appData }}/bytebase/shared/data'
+          {{- end }}
+          type: DirectoryOrCreate
+        name: bytebase-shared-volume

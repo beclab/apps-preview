@@ -1,0 +1,50 @@
+metadata:
+  title: Open WebUI
+  description: WebUI conviviale pour les LLM
+spec:
+  fullDescription: |
+    Open WebUI (anciennement Ollama WebUI) est une WebUI auto-hébergée extensible, riche en fonctionnalités et conviviale, conçue pour fonctionner entièrement hors ligne. Elle prend en charge divers runners LLM, notamment Ollama et les API compatibles OpenAI. Pour plus d'informations, consultez notre Open WebUI Documentation.
+
+    **Fonctionnalités clés d'Open WebUI**
+    - Intégration Ollama/OpenAI API : Intégrez sans effort des API compatibles OpenAI pour des conversations polyvalentes aux côtés des modèles Ollama. Personnalisez l'URL de l'API OpenAI pour vous lier à LMStudio, GroqCloud, Mistral, OpenRouter et plus encore.
+
+    - Pipelines, prise en charge des plugins Open WebUI : Intégrez de façon transparente une logique personnalisée et des bibliothèques Python dans Open WebUI à l'aide du Pipelines Plugin Framework. Lancez votre instance Pipelines, définissez l'URL OpenAI sur l'URL Pipelines et explorez des possibilités infinies. Les exemples incluent Function Calling, User Rate Limiting pour contrôler l'accès, Usage Monitoring avec des outils comme Langfuse, Live Translation avec LibreTranslate pour le support multilingue, Toxic Message Filtering et bien plus.
+
+    - Design responsive : Profitez d'une expérience fluide sur PC de bureau, ordinateur portable et appareils mobiles.
+
+    - Progressive Web App (PWA) pour mobile : Profitez d'une expérience de type application native sur votre appareil mobile avec notre PWA, offrant un accès hors ligne sur localhost et une interface utilisateur fluide.
+
+    - Prise en charge complète de Markdown et LaTeX : Enrichissez votre expérience LLM avec des capacités Markdown et LaTeX complètes.
+
+    - Appels vocaux/vidéo mains libres : Communiquez de façon fluide grâce aux fonctions intégrées d'appel vocal et vidéo mains libres, pour un environnement de chat plus dynamique et interactif.
+
+    - Model Builder : Créez facilement des modèles Ollama via la Web UI. Créez et ajoutez des personnages/agents personnalisés, personnalisez les éléments de chat et importez des modèles sans effort via l'intégration Open WebUI Community.
+
+    - Outil natif Python Function Calling : Améliorez vos LLM avec la prise en charge d'un éditeur de code intégré dans l'espace de travail des outils. Bring Your Own Function (BYOF) en ajoutant simplement vos fonctions Python pures.
+
+    - Intégration RAG locale : Plongez dans l'avenir des interactions de chat avec la prise en charge révolutionnaire de Retrieval Augmented Generation (RAG). Chargez des documents directement dans le chat ou ajoutez des fichiers à votre bibliothèque de documents, en y accédant avec la commande # avant une requête.
+
+    - Recherche web pour RAG : Effectuez des recherches web avec des fournisseurs comme SearXNG, Google PSE, Brave Search, serpstack, serper, Serply, DuckDuckGo et TavilySearch et injectez les résultats directement dans votre expérience de chat.
+
+    - Capacité de navigation web : Intégrez des sites web de façon transparente dans votre expérience de chat en utilisant la commande # suivie d'une URL.
+
+    - Intégration de génération d'images : Intégrez des capacités de génération d'images avec des options telles que AUTOMATIC1111 API ou ComfyUI (local), et DALL-E d'OpenAI (externe).
+
+    - Conversations avec de nombreux modèles : Interagissez sans effort avec divers modèles simultanément, en tirant parti de leurs forces uniques pour des réponses optimales.
+
+    - Contrôle d'accès basé sur les rôles (RBAC) : Assurez un accès sécurisé avec des permissions restreintes ; seules les personnes autorisées peuvent accéder à votre Ollama, et les droits exclusifs de création/pull de modèles sont réservés aux administrateurs.
+
+    - Prise en charge multilingue : Découvrez Open WebUI dans votre langue préférée grâce à notre prise en charge de l'internationalisation (i18n). Aidez-nous à élargir les langues prises en charge ! Nous recherchons activement des contributeurs !
+
+    - Mises à jour continues : Nous nous engageons à améliorer Open WebUI avec des mises à jour régulières, des correctifs et de nouvelles fonctionnalités.
+  upgradeDescription: |
+    Chart **1.0.47** — Open WebUI **v0.12.0**.
+    - Appels vocaux en temps réel avec avatars 3D animés (configuration OpenAI Realtime requise).
+    - Connexion à deux facteurs avec applications d’authentification et codes de récupération.
+    - Les discussions partagées autorisent les réponses et affichent les auteurs et la saisie en temps réel.
+    - Skills avec plusieurs fichiers et import par URL ; historique des versions des skills, modèles, outils et fonctions.
+    - Explorateur de fichiers dans les bases de connaissances, avec aperçu des originaux et modification du texte extrait.
+    - Contrôles de modèles personnalisés, groupes imbriqués et modèles par défaut par groupe.
+    - Tool Search expérimental charge les définitions à la demande avec les appels de fonctions natifs.
+    - Correctifs de sécurité, de contrôle d’accès et de stabilité.
+    - https://github.com/open-webui/open-webui/releases/tag/v0.12.0

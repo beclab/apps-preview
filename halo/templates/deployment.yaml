@@ -1,0 +1,111 @@
+﻿{{- $haloDomainENV := split "," .Values.domain.halo -}}
+{{- $haloDomain := index $haloDomainENV "_0" -}}
+  {{- $localDomain := $haloDomain -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: halo
+spec:
+  replicas: {{ .Values.workloads.halo.replicaCount }}
+  selector:
+    matchLabels:
+      app: halo
+  strategy:
+    type: Recreate  
+  template:
+    metadata:
+      labels:
+        app: halo
+    spec:
+      initContainers:
+        - name: init-permissions
+          image: docker.io/beclab/aboveos-busybox:1.37.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              base=/app/data/.halo2
+              for d in "$base" "$base/plugins" "$base/themes" "$base/attachments" "$base/logs" "$base/backups" "$base/indices"; do
+                mkdir -p "$d"
+                chown 1000:1000 "$d"
+              done
+              for d in plugins themes attachments logs backups indices; do
+                find "$base/$d" -maxdepth 1 ! -user 1000 -exec chown 1000:1000 {} + 2>/dev/null || true
+              done
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: halo-vol
+              mountPath: /app/data/.halo2
+      containers:
+        - name: halo
+          image: "docker.io/halohub/halo:2.26.0"
+          env:
+            - name: TZ
+              value: "Etc/UTC"
+            - name: JVM_OPTS
+              value: "-Xmx256m -Xms256m"
+            - name: HALO_WORK_DIR
+              value: /app/data/.halo2
+          args:
+            - "--spring.r2dbc.url=r2dbc:pool:postgresql://{{ .Values.postgres.host }}/{{ .Values.postgres.databases.halo }}"
+            - "--spring.r2dbc.username={{ .Values.postgres.username }}"
+            - "--spring.r2dbc.password={{ .Values.postgres.password }}"
+            - "--spring.sql.init.platform=postgresql"
+            - "--halo.external-url=https://{{$haloDomain}}"
+            - "--server.port=8090"
+          resources:
+            requests:
+              cpu: 700m
+              memory: 800Mi
+            limits:
+              cpu: 2000m
+              memory: 3Gi
+          ports:
+            - containerPort: 8090
+          volumeMounts:
+            - name: halo-vol
+              mountPath: /app/data/.halo2
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8090
+              scheme: HTTP
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 5
+          startupProbe:
+            tcpSocket:
+              port: 8090
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+      volumes:
+        - name: halo-vol
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appData }}/{{ .Release.Name }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: halo-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: halo
+  ports:
+    - protocol: TCP
+      port: 8090
+      targetPort: 8090

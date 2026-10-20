@@ -1,0 +1,31 @@
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  labels:
+    app.kubernetes.io/instance: mongodb
+    app.kubernetes.io/version: 5.0.14
+  name: mongodb
+  namespace: {{ .Release.Namespace }}
+spec:
+  clusterDef: mongodb
+  componentSpecs:
+    - name: mongodb
+      replicas: 1
+      resources:
+        limits:
+          cpu: 2000m
+          memory: 5Gi
+        requests:
+          cpu: 500m
+          memory: 500Mi
+      serviceVersion: 6.0.21
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 100Gi
+  terminationPolicy: Delete
+  topology: replicaset

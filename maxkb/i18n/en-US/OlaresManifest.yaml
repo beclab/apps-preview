@@ -1,0 +1,40 @@
+metadata:
+  title: MaxKB
+  description: Ready-to-use, flexible RAG Chatbot
+spec:
+  fullDescription: |    
+    **Default admin credentials:**
+    username: `admin`
+    password: `MaxKB@123..`
+
+    **Overview**
+    MaxKB = Max Knowledge Base, it is a chatbot based on Large Language Models (LLM) and Retrieval-Augmented Generation (RAG). MaxKB is widely applied in scenarios such as intelligent customer service, corporate internal knowledge bases, academic research, and education.
+
+    **Ready-to-Use**
+    Supports direct uploading of documents / automatic crawling of online documents, with features for automatic text splitting, vectorization, and RAG (Retrieval-Augmented Generation). This effectively reduces hallucinations in large models, providing a superior smart Q&A interaction experience.
+    
+    **Flexible Orchestration**
+    Equipped with a powerful workflow engine and function library, enabling the orchestration of AI processes to meet the needs of complex business scenarios.
+
+    **Seamless Integration**
+    Facilitates zero-coding rapid integration into third-party business systems, quickly equipping existing systems with intelligent Q&A capabilities to enhance user satisfaction.
+
+    **Model-Agnostic**
+    Supports various large models, including private models (such as DeepSeek, Llama, Qwen, etc.) and public models (like OpenAI, Claude, Gemini, etc.).
+  
+  upgradeDescription: |
+    Upgrade to v2.10.6-lts
+
+    Persistence:
+    - On upgrade, the chart copies a PostgreSQL cluster from the old Olares mount (appData/pg) into the official v2 path (/opt/maxkb/data/postgresql/pgdata) when that legacy cluster is the only copy, or larger than a leftover new-path cluster. It does not remount appData/pg at /var/lib/postgresql/data, because the official image treats PG_VERSION there as an unsupported v1 layout and exits.
+
+    Breaking change:
+    - Tencent Hunyuan and the legacy Tencent Cloud providers are merged into a new Tencent Cloud (TokenHub) provider. Existing Hunyuan / old Tencent Cloud models will not work after upgrade; reconfigure them on the Model Providers page.
+
+    Highlights:
+    - Security: chat upload attribution spoofing, cross-tenant document migration, XLSX image decompression DoS, IDOR on problem association, anonymous profile over-serialization, password-reset code brute force, function-library sandbox bypass (CVE-2026-79919), guest session integrity, and hardcoded Django SECRET_KEY
+    - Workflow default model settings for agent, knowledge-base, and tool workflows
+    - Knowledge Base / Agent list selectors now support search during document migration, user input, and "Add to Knowledge Base"
+    - Bug fixes for CSV/Excel import, full-text search, chat logs, workflow file preview, MiniMax H3, and several agent node issues
+
+    Full upgrade details: https://github.com/1Panel-dev/MaxKB/releases/tag/v2.10.6-lts

@@ -1,0 +1,22 @@
+metadata:
+  title: AFFiNE
+  description: Alternativa open source a Notion, Miro e Airtable
+spec:
+  fullDescription: |
+    AFFiNE è uno spazio di lavoro all-in-one open source e un sistema operativo per tutti i building block che assemblano la tua knowledge base e molto altro — wiki, knowledge management, presentazioni e asset digitali.
+    È un'alternativa migliore a Notion e Miro.
+    
+    **Funzionalità**
+    Una vera canvas per blocchi di qualsiasi forma. Docs e whiteboard sono ora completamente uniti.
+    - Molte app di editing affermano di essere una canvas per la produttività, ma AFFiNE è una delle poche che ti consente di mettere qualsiasi building block su una canvas senza bordi — rich text, sticky notes, pagine web incorporate, database multi-view, pagine collegate, forme e persino slide. Abbiamo tutto.
+    
+    Partner IA multimodale pronto per qualsiasi lavoro
+    - Scrivere un report di lavoro professionale? Trasformare uno schema in slide espressive e presentabili? Riassumere un articolo in una mindmap ben strutturata? Ordinare il piano di lavoro e il backlog delle attività? Oppure... disegnare e programmare prototipi di app e pagine web direttamente con un prompt? Con te, AFFiNE AI spinge la tua creatività ai limiti della tua immaginazione.
+    
+    Local-first e collaborazione in tempo reale
+    - Amiamo l'idea di local-first: possiedi sempre i tuoi dati sul disco, nonostante il cloud. Inoltre, AFFiNE supporta sync e collaborazioni in tempo reale sul web e su client multipiattaforma.
+    - Nota: la collaborazione multiutente non è ancora supportata su AFFiNE self-hosted.
+  upgradeDescription: |
+    Aggiorna AFFiNE da 0.27.2 a 0.27.4. Corregge il consumo di memoria della garbage collection del server, migliora la stabilità delle registrazioni e risolve problemi del diario e dei blocchi di codice. Le impostazioni BYOK sperimentali potrebbero richiedere una riconfigurazione.
+
+    https://github.com/toeverything/AFFiNE/releases/tag/v0.27.4

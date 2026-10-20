@@ -1,0 +1,20 @@
+metadata:
+  title: Coder
+  description: Entornos de desarrollo en la nube autoalojados
+spec:
+  upgradeDescription: |
+    El chart 1.0.23 actualiza Coder de v2.31.9 a v2.36.6.
+    Imagen: docker.io/beclab/coder-coder:v2.36.6.
+    La conexion PostgreSQL, la URL de acceso y la clave Anthropic opcional no cambian. Coder aplica las migraciones al arrancar. Si ya existe public.schema_migrations, un init container escribe antes un volcado pg_dump en appData/backups/chart-1.0.23/coder.dump. Los arranques posteriores y una base sin esa tabla lo omiten. La sonda de liveness espera mas para no cortar una migracion.
+    v2.36 convierte las cuentas login_type=none existentes a inicio con contrasena, bloquea nuevos registros dinamicos OAuth2 salvo oauth2_dcr_enabled y elimina chat_model_configs.provider.
+    Notas: https://github.com/coder/coder/releases/tag/v2.36.6
+  fullDescription: |
+    Coder es un entorno de desarrollo en la nube autoalojado y de código abierto que funciona con cualquier nube, IDE, SO, proveedor Git e IDP.
+
+    Coder permite a las organizaciones configurar entornos de desarrollo en su infraestructura de nube pública o privada. Los entornos se definen con Terraform, se conectan mediante un túnel Wireguard® seguro de alta velocidad y se apagan automáticamente cuando no se usan para ahorrar costes. Coder da a los equipos de ingeniería la flexibilidad de usar la nube para las cargas de trabajo más beneficiosas.
+
+    - Defina entornos de desarrollo en la nube con Terraform
+      - VMs EC2, pods de Kubernetes, contenedores Docker, etc.
+    - Apague automáticamente recursos inactivos para ahorrar costes
+    - Integre desarrolladores en segundos en lugar de días
+

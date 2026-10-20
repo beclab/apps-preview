@@ -1,0 +1,101 @@
+metadata:
+  description: "通用 Ollama 引擎基座。在安装时通过环境变量选择任意 Ollama 库模型。"
+  title: Ollama 引擎基座
+
+spec:
+  upgradeDescription: |
+    将 Ollama 从 v0.33.1 升级至 v0.40.2。Chart 1.3.18。
+
+    **更新内容**（与 Olares 相关）
+
+    v0.40.2
+    - 旧版本拉取的模型会在首次运行时后台升级，以获得更好的 llama.cpp 性能与兼容性
+    - 升级前的模型副本会作为备份保留在磁盘上，因此已升级的模型会临时占用额外存储
+    - `ollama list` 不再为已升级的模型显示重复条目
+
+    v0.40.1
+    - 服务端新增云端用量与余额 API 代理
+    - 修复读取 clef head 超过 2GiB 时崩溃
+    - MLX 移除已合入上游的 Metal 常驻内存补丁
+
+    v0.40.0
+    - 在 Apple Silicon 上，MLX 运行时支持的模型架构默认改用 MLX 运行（qwen3.8、gemma4、qwen3.6、qwen3.5、决策模型以及 embeddinggemma-2）
+
+    v0.35.1
+    - 通过 `/v1/systemone` 支持 Clef 与 Clef Flash 多模态决策模型
+    - 使用网页搜索时每次回复最多可搜索 10 次（原为 3 次）
+    - Modelfile 支持 `CAPABILITY` 声明，在 GGUF/safetensors 创建与模型继承中保留
+    - 更新 llama.cpp 与 MLX 引擎
+
+    v0.35.0
+    - 通过 `/v1/systemone` 支持决策模型，提供 `choice`、`noul`、`score` 三种问题类型
+    - 修复 MLX 模型下载卡住后一直挂起
+    - 使用已废弃的 `typical_p` 参数的请求改为记录警告，不再直接失败
+
+    v0.34.4
+    - 思考模型的结构化输出改为单次处理，更快且更稳定
+    - 修复本地模型库较大时偶发的 “model not found” 错误
+    - 更新 llama.cpp、MLX 与 XGrammar
+
+    v0.34.3
+    - `GET /api/show` 现在会返回模型的思考（thinking）可选项与默认值
+    - MLX 支持 Nemotron H 视觉模型
+    - 修复从 HuggingFace 拉取模型的问题
+
+    v0.34.2
+    - 修复 MLX 投机解码长文本生成时内存持续增长
+    - 更新 llama.cpp
+
+    v0.34.1
+    - 大型本地模型库下 `/api/tags` 明显加快（测试中冷启动由 3.1 秒降至 294 毫秒），模型能力上报更一致
+    - 重复 token 检测需连续 100 个重复 token 才触发，减少误判
+    - MLX safetensors 的 `ollama create` 不再是实验特性；新建模型不能再设置 `typical_p`
+    - 更新 MLX 与 llama.cpp
+
+    v0.34.0
+    - 提升 Apple Silicon 上的结构化输出性能
+    - 新增 OpenAI 兼容的客户端工具搜索与响应压缩
+
+    v0.33.3
+    - 遵循 GGUF 模型自带的默认参数
+    - 上报缓存的 prompt token 数
+    - MLX 上的 gemma4 支持图像与音频
+    - 更新 MLX、MLX-C 与 llama.cpp
+
+    v0.33.2
+    - Claude Desktop 代理在模型目录更新时不再中断进行中的请求
+
+    详细发布说明请访问：
+    https://github.com/ollama/ollama/releases
+  fullDescription: |
+    **重要提示**  
+    此应用是一个模板，不能单独使用。请按下方环境变量设置模型后，方可使用本应用提供模型服务。
+
+    **环境变量设置指南**
+    - `MODEL_SOURCE`：`ollama://<模型>:<标签>`。Ollama 模型库下载源，例如 `ollama://qwen3.5:2b` 或 `ollama://gemma3:27b`。可在 https://ollama.com/library 浏览模型。
+    - `MODEL_NAME`：`<模型>:<标签>`。模型名称，取 `MODEL_SOURCE` 中 `ollama://` 之后的字符串，例如 `qwen3.5:2b`。此项也作为 OpenAI 别名。
+    - `MODEL_MODE`：`chat` 或 `embedding`。对话模型选 `chat`，向量模型选 `embedding`。
+    - `MODEL_SUPPORTS`：模型能力选项（Vision / Tools / Thinking / None）。请选择您的模型支持的功能，可在 ollama.com/library 查看模型能力。必填。
+    - `ENGINE_ARGS`：`OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=65536 ...`。未设置时图表在 ollama 守护进程默认 `-1`（常驻显存）；llm-init 不转发此项。
+    - `LOG_LEVEL`：`debug`、`info`、`warn` 或 `error`。llm-init 容器的日志等级。
+    - `OLLAMA_REQUIRED_GPU_MEMORY`：`8Gi`、`8192` 或 `8192Mi`。模型所需显存。NVIDIA 下设置 `nvidia.com/gpumem`（MiB），Spark 下设置 pod 显存。
+
+    **工作流程说明**
+    首先，`llm-init` 从 Ollama 模型库拉取并准备模型，然后 Ollama 守护进程在模型准备好后启动服务。这两个部分独立运行但共享文件与进度信息。
+
+    **技术栈说明**
+    - **Ollama 守护进程**（11434 端口）：拉取并服务模型
+    - **llm-init**（8090 端口）：驱动模型拉取、展示进度，并通过 OpenAI API 代理到 Ollama
+
+    **加速器模式**
+    | 模式           | 设备             | 说明                                                         |
+    |----------------|------------------|--------------------------------------------------------------|
+    | `nvidia`       | GPU (CUDA)       | 需设置 `OLLAMA_REQUIRED_GPU_MEMORY`；Ollama 默认使用 GPU     |
+    | `nvidia-gb10`  | GPU (Spark)      | 类似上方，但显存由 pod 管理                                  |
+
+    **模型存储**
+    所有拉取的模型存储在共享目录 `appCommon/ollama`。所有 Ollama 应用共用此目录，按 digest 去重，避免重复占用存储。
+
+    **资源建议**
+    - CPU、内存和 GPU 数量随图表自动配置，磁盘配额为固定
+    - 部署大模型（如 gemma3:27b）时，可在 `ENGINE_ARGS` 中设置 `OLLAMA_CONTEXT_LENGTH` 和 `OLLAMA_KV_CACHE_TYPE` 以平衡上下文长度与显存占用

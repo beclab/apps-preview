@@ -1,0 +1,279 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: surrealdb
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+    io.kompose.service: surrealdb
+spec:
+  replicas: {{ .Values.workloads.surrealdb.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: surrealdb
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: surrealdb
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      initContainers:
+      - name: init-chmod-surrealdb
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        command:
+          - sh
+          - '-c'
+          - |
+            set -e
+            mkdir -p /app-data-root
+            chown -R 1000:1000 /app-data-root
+            find /app-data-root -type d -exec chmod 775 {} +
+            find /app-data-root -type f -exec chmod 664 {} +
+        volumeMounts:
+          - name: surrealdbdata
+            mountPath: /app-data-root
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+      containers:
+      - name: surrealdb
+        image: "docker.io/surrealdb/surrealdb:v2"
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+        command:
+          - /surreal
+          - start
+          - --log
+          - info
+          - --user
+          - root
+          - --pass
+          - root
+          - rocksdb:/mydata/mydatabase.db
+        env:
+        - name: SURREAL_EXPERIMENTAL_GRAPHQL
+          value: "true"
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+        volumeMounts:
+        - mountPath: /mydata
+          name: surrealdbdata
+      volumes:
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}/surrealdb'
+          type: DirectoryOrCreate
+        name: surrealdbdata
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: surrealdb
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+    io.kompose.service: surrealdb
+spec:
+  ports:
+  - name: "8000"
+    port: 8000
+    targetPort: 8000
+  selector:
+    io.kompose.service: surrealdb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opennotebook
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+    io.kompose.service: opennotebook
+spec:
+  replicas: {{ .Values.workloads.opennotebook.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: opennotebook
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: opennotebook
+    spec:
+      initContainers:
+      - name: init-chmod-data
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        command:
+          - sh
+          - '-c'
+          - |
+            chown -R 1000:1000 /app-data-root
+        volumeMounts:
+          - name: appdata
+            mountPath: /app-data-root
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+      - name: migrate-legacy-dirs
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        command:
+          - sh
+          - '-c'
+          - |
+            set -e
+            for sub in uploads config; do
+              src="/mnt/legacy/$sub"
+              dst="/app-data-root/$sub"
+              if [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
+                mkdir -p "$dst"
+                if [ -z "$(ls -A "$dst" 2>/dev/null)" ]; then
+                  echo "[migrate-opennotebook] copying legacy $sub into /app/data/$sub..."
+                  cp -a "$src/." "$dst/"
+                else
+                  echo "[migrate-opennotebook] skip $sub (destination already has data)"
+                fi
+              fi
+            done
+        volumeMounts:
+          - name: appdata
+            mountPath: /app-data-root
+          - name: legacy-uploads
+            mountPath: /mnt/legacy/uploads
+          - name: legacy-config
+            mountPath: /mnt/legacy/config
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+      containers:
+      - name: opennotebook
+        image: "docker.io/lfnovo/open_notebook:1.14.0"
+        command:
+          - sh
+          - '-c'
+          - |
+            python3 << 'PATCH_EOF'
+            import pathlib
+            patched = []
+
+            # OLARES HOTFIX: route STT credential by stt_model.credential link.
+            # Upstream still sets audio_provider/audio_model but does not wire the
+            # linked credential into content-core/esperanto for STT calls.
+            # Track: lfnovo/open-notebook (#654, #676, esperanto#103).
+            f = pathlib.Path('/app/open_notebook/graphs/source.py')
+            marker = '# OLARES HOTFIX: route STT credential by stt_model.credential'
+            anchor = (
+                '                config_kwargs["audio_provider"] = stt_model.provider\n'
+                '                config_kwargs["audio_model"] = stt_model.name\n'
+                '                logger.debug(\n'
+                '                    f"Using speech-to-text model: {stt_model.provider}/{stt_model.name}"\n'
+                '                )'
+            )
+            patch_block = (
+                '\n                ' + marker + '\n'
+                '                import os as _olares_os\n'
+                '                _olares_cred_id = getattr(stt_model, "credential", None)\n'
+                '                if _olares_cred_id:\n'
+                '                    from open_notebook.database.repository import (\n'
+                '                        repo_query as _olares_repo_query,\n'
+                '                        ensure_record_id as _olares_ensure_record_id,\n'
+                '                    )\n'
+                '                    _olares_cred_rows = await _olares_repo_query(\n'
+                '                        "SELECT base_url, api_key FROM $id",\n'
+                '                        {"id": _olares_ensure_record_id(_olares_cred_id)},\n'
+                '                    )\n'
+                '                    if _olares_cred_rows and _olares_cred_rows[0].get("base_url"):\n'
+                '                        _olares_os.environ["OPENAI_COMPATIBLE_BASE_URL_STT"] = _olares_cred_rows[0]["base_url"]\n'
+                '                        _olares_ak = _olares_cred_rows[0].get("api_key")\n'
+                '                        if isinstance(_olares_ak, dict):\n'
+                '                            _olares_ak = _olares_ak.get("secret_value") or _olares_ak.get("value") or ""\n'
+                '                        if _olares_ak:\n'
+                '                            _olares_os.environ["OPENAI_COMPATIBLE_API_KEY_STT"] = str(_olares_ak)'
+            )
+            if f.exists():
+                s = f.read_text()
+                if marker not in s and anchor in s:
+                    f.write_text(s.replace(anchor, anchor + patch_block))
+                    patched.append('source.py (STT credential routing)')
+
+            if patched:
+                print(f'=== Open Notebook hotfix: patched {len(patched)} files ===')
+                for p in patched:
+                    print(f'  - {p}')
+            else:
+                print('=== Open Notebook hotfix: no patches applied (already patched or upstream changed) ===')
+            PATCH_EOF
+
+            exec /app/scripts/docker-entrypoint.sh /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+        env:
+        - name: FRONTEND_BIND_HOST
+          value: '0.0.0.0'
+        - name: ESPERANTO_STT_TIMEOUT
+          value: "1800"
+        - name: TTS_BATCH_SIZE
+          value: "1"
+        {{- if .Values.olaresEnv.PASSWORD }}
+        - name: OPEN_NOTEBOOK_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-secrets
+              key: OPEN_NOTEBOOK_PASSWORD
+        {{- end }}
+        envFrom:
+        - configMapRef:
+            name: opennotebook-config
+        ports:
+        - containerPort: 8502
+        - containerPort: 5055
+        resources:
+          limits:
+            cpu: "2"
+            memory: 2Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+        - mountPath: /app/data
+          name: appdata
+      volumes:
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}/data'
+          type: DirectoryOrCreate
+        name: appdata
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}/uploads'
+          type: DirectoryOrCreate
+        name: legacy-uploads
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}/config'
+          type: DirectoryOrCreate
+        name: legacy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opennotebook
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+    io.kompose.service: opennotebook
+spec:
+  ports:
+  - name: "8502"
+    port: 8502
+    targetPort: 8502
+  - name: "5055"
+    port: 5055
+    targetPort: 5055
+  selector:
+    io.kompose.service: opennotebook

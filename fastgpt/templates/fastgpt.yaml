@@ -1,0 +1,150 @@
+﻿---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: fastgpt
+spec:
+  replicas: {{ .Values.workloads.fastgpt.replicaCount }}
+  selector:
+    matchLabels:
+      app: fastgpt
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: fastgpt
+    spec:
+      containers:
+        - name: postgres
+          image: "docker.io/beclab/pgvector-pgvector:0.8.0-pg15"
+          env:
+            - name: POSTGRES_USER
+              value: "fastgpt"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fastgpt-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "postgres"
+          volumeMounts:
+            - name: pg-storage
+              mountPath: /var/lib/postgresql/data
+          ports:
+            - containerPort: 5432
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "200Mi"
+            limits:
+              cpu: "300m"
+              memory: "800Mi"
+
+        - name: fastgpt
+          image: "docker.io/beclab/labring-fastgpt:v4.14.23"
+          env:
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: Etc/UTC
+            - name: DISPLAY
+              value: ":0"
+          envFrom:
+            - configMapRef:
+                name: fastgpt-config
+            - secretRef:
+                name: fastgpt-secrets
+          ports:
+            - name: http
+              containerPort: 3000
+          volumeMounts:
+            - name: appdata-config
+              mountPath: /app/data/config.json
+              subPath: config.json
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "8Gi"
+          securityContext:
+            runAsUser: 0
+
+        - name: code-sandbox
+          image: "docker.io/beclab/labring-fastgpt-code-sandbox:v4.14.23"
+          env:
+            - name: SANDBOX_PORT
+              value: "3001"
+            - name: SANDBOX_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fastgpt-secrets
+                  key: CODE_SANDBOX_TOKEN
+            - name: SANDBOX_POOL_SIZE
+              value: "5"
+            - name: SANDBOX_MAX_MEMORY_MB
+              value: "256"
+            - name: SANDBOX_MAX_TIMEOUT
+              value: "60000"
+            - name: CHECK_INTERNAL_IP
+              value: "false"
+            - name: LOG_ENABLE_CONSOLE
+              value: "true"
+            - name: LOG_CONSOLE_LEVEL
+              value: "warning"
+          ports:
+            - name: sandbox
+              containerPort: 3001
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "3Gi"
+
+      volumes:
+        - name: appdata-config
+          configMap:
+            name: app-config
+        - name: pg-storage
+          hostPath:
+            path: "{{ .Values.userspace.appData }}/pg"
+            type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastgpt-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: LoadBalancer
+  selector:
+    app: fastgpt
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: LoadBalancer
+  selector:
+    app: fastgpt
+  ports:
+    - name: http
+      port: 3000
+      targetPort: sandbox

@@ -1,0 +1,345 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mastodon-web
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: mastodon
+    helm.sh/chart: mastodon-0.1.2
+    app.kubernetes.io/instance: mastodon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: mastodon
+    app.kubernetes.io/component: web
+spec:
+  replicas: {{ (index .Values.workloads "mastodon-web").replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mastodon
+      app.kubernetes.io/instance: mastodon
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mastodon
+        helm.sh/chart: mastodon-0.1.2
+        app.kubernetes.io/instance: mastodon
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: web
+      annotations:
+        checksum/mastodon-default: {{ include (print $.Template.BasePath "/configmap-mastodon-default.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: mastodon
+      
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: mastodon
+                    app.kubernetes.io/instance: mastodon
+                    app.kubernetes.io/component: web
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+      securityContext:
+        # LinuxServer.io image requires root permissions to write to certain directories
+        # fsGroup: 1001
+        # fsGroupChangePolicy: Always
+        supplementalGroups: []
+        sysctls: []
+      initContainers:
+        # Wait for basic services to be ready first (parallel wait, not dependent on asset precompilation)
+        - name: wait-for-redis
+          image: "docker.io/beclab/wait-for:0.1.0"
+          args:
+            - '-it'
+            - >-
+              mastodon-redis-master:6379
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+        - name: wait-for-db
+          image: "docker.io/beclab/wait-for:0.1.0"
+          args:
+            - '-it'
+            - >-
+              {{ .Values.postgres.host }}:{{ .Values.postgres.port }}
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+        - name: wait-for-s3
+          image: "docker.io/beclab/wait-for:0.1.0"
+          args:
+            - '-it'
+            - >-
+              {{ .Values.minio.host }}:{{ .Values.minio.port }}
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+        - name: prepare-tmp-dir
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - mkdir -p /tmp/tmp-dir
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          volumeMounts:
+            - name: empty-dir
+              mountPath: /tmp
+            # Wait for Elasticsearch (using smart health check, wait for cluster status to be yellow or green)
+        - name: wait-for-elasticsearch
+          image: "beclab/curlimages-curl:8.8.0"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for Elasticsearch to be ready..."
+              until curl -sf http://mastodon-elasticsearch:9200/_cluster/health?wait_for_status=yellow&timeout=30s > /dev/null 2>&1; do
+                echo "Elasticsearch not ready yet, waiting..."
+                sleep 2
+              done
+              echo "Elasticsearch is ready!"
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 50m
+              memory: 32Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+      containers:
+        - name: mastodon
+          image: "docker.io/linuxserver/mastodon:4.7.1"
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 2000m
+              memory: 2Gi
+            limits:
+              cpu: "3"
+              memory: 4Gi
+          securityContext:
+            allowPrivilegeEscalation: true
+            privileged: false
+            readOnlyRootFilesystem: false
+            seLinuxOptions: {}
+            seccompProfile:
+              type: RuntimeDefault
+          # LinuxServer.io image uses default /init entrypoint
+          # Image automatically handles asset precompilation and startup logic
+          # Only need to control startup mode via environment variable MASTODON_MODE=web
+          # Let image use default behavior, it will automatically handle asset precompilation
+          command:
+            - /bin/bash
+            - -c
+            - |
+              # Copy initializer files
+              mkdir -p /app/www/config/initializers
+              cp /config/initializers/*.rb /app/www/config/initializers/ 2>/dev/null || true
+              # Use image's default startup method
+              exec /init
+          env:
+            # LinuxServer.io image doesn't use BITNAMI_DEBUG, but keep it just in case
+            # - name: BITNAMI_DEBUG
+            #   value: "false"
+            # LinuxServer.io image controls running user via PUID/PGID, set to 0 to run as root
+            - name: PUID
+              value: "0"
+            - name: PGID
+              value: "0"
+            # LinuxServer.io image controls startup mode via environment variables
+            - name: MASTODON_MODE
+              value: "web"
+            - name: MASTODON_WEB_PORT_NUMBER
+              value: "3000"
+            - name: MASTODON_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mastodon-default
+                  key: MASTODON_DATABASE_PASSWORD
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: mastodon-default
+                  key: DB_PASS
+            - name: MASTODON_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mastodon-redis
+                  key: "redis-password"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mastodon-redis
+                  key: "redis-password"
+            {{- if .Values.storage.s3Enabled }}
+            - name: MASTODON_AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: mastodon-default
+                  key: MASTODON_AWS_ACCESS_KEY_ID
+            - name: MASTODON_AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mastodon-default
+                  key: MASTODON_AWS_SECRET_ACCESS_KEY
+            {{- end }}
+            # SMTP configuration - extracted to env for special scenario needs
+            {{- if .Values.olaresEnv.SMTP_SERVER }}
+            - name: SMTP_SERVER
+              value: "{{ .Values.olaresEnv.SMTP_SERVER }}"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_PORT }}
+            - name: SMTP_PORT
+              value: "{{ .Values.olaresEnv.SMTP_PORT }}"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_LOGIN }}
+            - name: SMTP_LOGIN
+              value: "{{ .Values.olaresEnv.SMTP_LOGIN }}"
+            {{- end }}
+{{- if .Values.olaresEnv.SMTP_PASSWORD }}
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mastodon-default
+                  key: SMTP_PASSWORD
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_FROM_ADDRESS }}
+            - name: SMTP_FROM_ADDRESS
+              value: "{{ .Values.olaresEnv.SMTP_FROM_ADDRESS }}"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_DOMAIN }}
+            - name: SMTP_DOMAIN
+              value: "{{ .Values.olaresEnv.SMTP_DOMAIN }}"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_DELIVERY_METHOD }}
+            - name: SMTP_DELIVERY_METHOD
+              value: "{{ .Values.olaresEnv.SMTP_DELIVERY_METHOD }}"
+            {{- else }}
+            - name: SMTP_DELIVERY_METHOD
+              value: "smtp"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_AUTH_METHOD }}
+            - name: SMTP_AUTH_METHOD
+              value: "{{ .Values.olaresEnv.SMTP_AUTH_METHOD }}"
+            {{- else }}
+            - name: SMTP_AUTH_METHOD
+              value: "plain"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_CA_FILE }}
+            - name: SMTP_CA_FILE
+              value: "{{ .Values.olaresEnv.SMTP_CA_FILE }}"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_OPENSSL_VERIFY_MODE }}
+            - name: SMTP_OPENSSL_VERIFY_MODE
+              value: "{{ .Values.olaresEnv.SMTP_OPENSSL_VERIFY_MODE }}"
+            {{- else }}
+            - name: SMTP_OPENSSL_VERIFY_MODE
+              value: "peer"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_SSL }}
+            - name: SMTP_SSL
+              value: "{{ .Values.olaresEnv.SMTP_SSL }}"
+            {{- else }}
+            - name: SMTP_SSL
+              value: "false"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_TLS }}
+            - name: SMTP_TLS
+              value: "{{ .Values.olaresEnv.SMTP_TLS }}"
+            {{- else }}
+            - name: SMTP_TLS
+              value: "false"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_ENABLE_STARTTLS }}
+            - name: SMTP_ENABLE_STARTTLS
+              value: "{{ .Values.olaresEnv.SMTP_ENABLE_STARTTLS }}"
+            {{- else }}
+            - name: SMTP_ENABLE_STARTTLS
+              value: "false"
+            {{- end }}
+            {{- if .Values.olaresEnv.SMTP_ENABLE_STARTTLS_AUTO }}
+            - name: SMTP_ENABLE_STARTTLS_AUTO
+              value: "{{ .Values.olaresEnv.SMTP_ENABLE_STARTTLS_AUTO }}"
+            {{- else }}
+            - name: SMTP_ENABLE_STARTTLS_AUTO
+              value: "false"
+            {{- end }}
+            # Disable Vite build system
+            - name: VITE_SKIP
+              value: "true"
+            - name: DISABLE_VITE
+              value: "true"
+            - name: VITE_RUBY_HOST
+              value: "localhost"
+            - name: VITE_RUBY_PORT
+              value: "3000"
+          envFrom:
+            - configMapRef:
+                name: mastodon-default
+            - secretRef:
+                name: mastodon-default
+          ports:
+            - name: http
+              containerPort: 3000
+          livenessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 10
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+            httpGet:
+              path: /health
+              port: http
+          # Add startup probe to ensure health check only after container is fully started
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          volumeMounts:
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+            - name: initializers
+              mountPath: /config/initializers
+            - name: system-data
+              mountPath: /app/www/public/system
+      volumes:
+          - name: empty-dir
+            emptyDir: {}
+          - name: initializers
+            configMap:
+              name: mastodon-initializers
+          - name: system-data
+            hostPath:
+              path: '{{ .Values.userspace.appData }}/mastodon/system'
+              type: DirectoryOrCreate

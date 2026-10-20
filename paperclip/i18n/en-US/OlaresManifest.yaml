@@ -1,0 +1,27 @@
+metadata:
+  title: Paperclip
+  description: Open-source orchestration platform for AI agent companies.
+spec:
+  fullDescription: |
+    **First-time admin setup**
+    After the first startup, open the Paperclip URL in your browser, sign in or create an account, then choose **Claim this instance** on the setup screen to become the first admin.
+
+    **Overview**
+    Paperclip is a Node.js server and React UI that orchestrates a team of AI agents to run a business. Bring your own agents, assign goals, and track your agents' work and costs from one dashboard.
+
+    If OpenClaw is an employee, Paperclip is the company.
+
+    **Features**
+    - Bring Your Own Agent - any agent, any runtime, one org chart (OpenClaw, Claude Code, Codex, Cursor)
+    - Goal Alignment - every task traces back to the company mission
+    - Heartbeats - agents wake on a schedule, check work, and act
+    - Cost Control - monthly budgets per agent with automatic enforcement
+    - Multi-Company - one deployment, many companies with complete data isolation
+    - Ticket System - every conversation traced with full tool-call tracing and audit log
+    - Governance - approve hires, override strategy, pause or terminate any agent
+    - Org Chart - hierarchies, roles, reporting lines for your agent team
+    - Mobile Ready - monitor and manage from anywhere
+    - External PostgreSQL support for production deployments
+  upgradeDescription: |
+    Updated Paperclip to v2026.1005.0.
+    https://github.com/paperclipai/paperclip/releases/tag/v2026.1005.0

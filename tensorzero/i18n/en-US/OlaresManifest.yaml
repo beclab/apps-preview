@@ -1,0 +1,18 @@
+metadata:
+  title: TensorZero
+  description: An open-source LLMOps platform
+spec:
+  upgradeDescription: |
+    TensorZero 2026.6.0 fixes a high-risk vulnerability in the gateway.
+
+    [Release notes](https://github.com/tensorzero/tensorzero/releases/tag/2026.6.0)
+  fullDescription: |
+    TensorZero is an open-source LLMOps platform that unifies:
+
+    - **Gateway:** access every LLM provider through a unified API, built for performance (<1ms p99 latency)
+    - **Observability:** store inferences and feedback in your database, available programmatically or in the UI
+    - **Evaluation:** benchmark individual inferences or end-to-end workflows using heuristics, LLM judges, etc.
+    - **Optimization:** collect metrics and human feedback to optimize prompts, models, and inference strategies
+    - **Experimentation:** ship with confidence with built-in A/B testing, routing, fallbacks, retries, etc.
+
+    [Documentation](https://www.tensorzero.com/docs)

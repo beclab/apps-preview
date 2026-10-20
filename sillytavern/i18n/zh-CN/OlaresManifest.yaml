@@ -1,0 +1,40 @@
+metadata:
+  description: 面向高级用户的 LLM 前端界面
+  title: SillyTavern
+spec:
+  fullDescription: |
+    SillyTavern 是一个本地安装的用户界面，允许你与文本生成大语言模型（LLM）、图像生成引擎和文本转语音（TTS）语音模型进行交互。
+
+    SillyTavern 起始于 2023 年 2 月，最初作为 TavernAI 1.2.8 的分支。经过两年多的独立开发，现已有 200 多位贡献者，并持续为资深 AI 爱好者提供领先的软件体验。
+
+    **主要特性**
+    - 高级文本生成设置，可使用众多社区自制的预设
+    - World Info 支持：为你的角色卡创建丰富的世界观或节省 Token
+    - 群聊支持：打造多角色聊天室，让角色互相或与您对话
+    - 丰富的界面自定义选项：主题色彩、背景图片、自定义 CSS 等
+    - 用户角色设定：让 AI 更好地了解你，获得更有沉浸感的体验
+    - 内置 RAG 支持：为聊天对话添加可供 AI 参考的文档
+    - 强大的聊天命令子系统及脚本引擎
+
+    **SillyTavern 拥有强大的拓展性：**
+    - 角色情感表达（精灵图）
+    - 聊天历史自动摘要
+    - 自动化界面与聊天翻译
+    - 支持 Stable Diffusion/FLUX/DALL-E 等图像生成
+    - AI 回复消息文本转语音功能
+    - 网络搜索，实时为你的提示补充真实世界信息
+    - 更多扩展和素材可在“下载扩展和资源”菜单获取
+
+  upgradeDescription: |
+    上游发布：[SillyTavern 1.18.0](https://github.com/SillyTavern/SillyTavern/releases/tag/1.18.0)
+
+    **变更**
+
+    - 新增 Cloudflare Workers AI 与 MiniMax 对话补全来源，并扩大模型支持，包括 DeepSeek v4、GPT 5.4/5.5、Gemma 4 和 Claude Opus 4.7。
+    - 基本认证增加速率限制，可选私有地址白名单以防 SSRF，以及 SSO 可信代理的 IP 白名单。
+    - 安装第三方扩展时会要求确认。资源列表按官方与社区扩展分组。
+
+    **修复**
+
+    - 移动端 Firefox 的文本编辑、启动时角色列表过滤器，以及空 cache-control 消息导致的服务器崩溃。
+

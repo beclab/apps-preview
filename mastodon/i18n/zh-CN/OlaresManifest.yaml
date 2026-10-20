@@ -1,0 +1,51 @@
+metadata:
+  description: 您自托管的、全球互联的微博社区
+  title: Mastodon
+spec:
+  fullDescription: |
+    Mastodon 是一个自由开源的社交网络服务平台，支持 ActivityPub 协议，用户可以方便地关注朋友或发现新朋友。
+
+    用户在 Mastodon 上可以自由发布各种内容，包括链接、图片、文字和视频。所有 Mastodon 服务器通过一个联合网络互联互通，这意味着不同服务器的用户可以轻松交流，甚至包括其他支持 ActivityPub 协议的非 Mastodon 软件！
+
+    功能亮点
+    开放互通：完全兼容任何遵循相同标准的平台
+    - 只要是支持 ActivityPub 协议的，都可以加入这一社交网络。
+
+    实时更新：按时间顺序实时更新动态
+    - 关注的动态会通过 WebSockets 实时在用户界面中更新。同时提供全局视角的显示方式！
+
+    支持多种媒体附件，如图片和短视频
+    - 用户可以上传和查看动态中的图片和 WebM/MP4 视频。无声视频将作为 GIF 处理，而有声视频则持续循环播放！
+
+    安全与管理工具全面
+    - Mastodon 提供私密发布、账户锁定、内容过滤、静音、屏蔽等多种功能，以及完善的举报与管理系统。
+
+    支持 OAuth2 及简洁的 REST API
+    - 作为 OAuth2 服务提供者，Mastodon 允许第三方应用通过 REST 和 Streaming API 接入。这样的设计使得应用生态丰富，用户有更多选择！
+
+  upgradeDescription: |
+    上游发布：[Mastodon 4.7.1](https://github.com/mastodon/mastodon/releases/tag/v4.7.1)
+
+    **破坏性变更**
+
+    - 自 Mastodon 4.3 起从未登录过的用户将被登出。
+    - 从 4.5 升级时数据库迁移在大型实例上可能耗时较长。升级前请备份数据库。
+    - 如果从 4.5 升级，请一并阅读 [4.6.0](https://github.com/mastodon/mastodon/releases/tag/v4.6.0) 和 [4.7.0](https://github.com/mastodon/mastodon/releases/tag/v4.7.0) 说明。
+
+    **变更**
+
+    - 更改 handle 的远程账号会改名，而不再创建重复账号。
+    - 带预览卡片的外发帖会包含 Link 附件。
+    - 管理后台新增话题标签审计日志，以及 IP 封禁页的搜索框。
+
+    **修复**
+
+    - LDAP、PAM 和 SSO 账号在 2FA 流程中的密码认证绕过。
+    - 处理异常 JSON-LD 活动时的拒绝服务。
+    - 已停用的员工账号仍可使用管理 API。
+
+    **Olares 部署变更**
+
+    - 通过 Olares 入口打开应用首页不再返回 500。
+    - 实时动态已启用。此前该功能是关闭的。
+    - Streaming 健康检查 URL 不再跳转到损坏的 `https:/…` 地址。

@@ -1,0 +1,124 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  clickhouse: 1
+  minio: 1
+  langfuse: 1
+  langfuse-worker: 1
+  langfuse-redis: 1
+metadata:
+  name: langfuse
+  icon: https://app.cdn.olares.com/appstore/langfuse/icon.png
+  description: Open source LLM engineering platform
+  appid: langfuse
+  title: Langfuse
+  version: '1.0.16'
+  categories:
+  - Productivity_v112
+  - workspace
+  - agents
+  tags:
+  - framework
+  - collaboration
+
+entrances:
+  - name: langfuse
+    host: langfuse-web
+    port: 3000
+    icon: https://app.cdn.olares.com/appstore/langfuse/icon.png
+    title: Langfuse
+    authLevel: internal
+    openMethod: window
+spec:
+  versionName: '4.30.0'
+  featuredImage: https://app.cdn.olares.com/appstore/langfuse/1.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/langfuse/1.webp
+  - https://app.cdn.olares.com/appstore/langfuse/2.webp
+  - https://app.cdn.olares.com/appstore/langfuse/3.webp
+  - https://app.cdn.olares.com/appstore/langfuse/4.webp
+  - https://app.cdn.olares.com/appstore/langfuse/5.webp
+  - https://app.cdn.olares.com/appstore/langfuse/6.webp
+  - https://app.cdn.olares.com/appstore/langfuse/7.webp
+  fullDescription: |
+    Langfuse is an open source LLM engineering platform. It helps teams collaboratively develop, monitor, evaluate, and debug AI applications. Langfuse can be self-hosted in minutes and is battle-tested.
+
+    Core Features
+    LLM Application Observability: Instrument your app and start ingesting traces to Langfuse, thereby tracking LLM calls and other relevant logic in your app such as retrieval, embedding, or agent actions. Inspect and debug complex logs and user sessions.
+
+    Prompt Management helps you centrally manage, version control, and collaboratively iterate on your prompts. Thanks to strong caching on server and client side, you can iterate on prompts without adding latency to your application.
+
+    Evaluations are key to the LLM application development workflow, and Langfuse adapts to your needs. It supports LLM-as-a-judge, user feedback collection, manual labeling, and custom evaluation pipelines via APIs/SDKs.
+
+    Datasets enable test sets and benchmarks for evaluating your LLM application. They support continuous improvement, pre-deployment testing, structured experiments, flexible evaluation, and seamless integration with frameworks like LangChain and LlamaIndex.
+
+    LLM Playground is a tool for testing and iterating on your prompts and model configurations, shortening the feedback loop and accelerating development. When you see a bad result in tracing, you can directly jump to the playground to iterate on it.
+
+    Comprehensive API: Langfuse is frequently used to power bespoke LLMOps workflows while using the building blocks provided by Langfuse via the API. OpenAPI spec, Postman collection, and typed SDKs for Python, JS/TS are available.
+  upgradeDescription: |
+    Add the Helm release revision to the MinIO bucket Job name so upgrades do not patch its immutable pod template.
+    Upstream release: [Langfuse 4.30.0](https://github.com/langfuse/langfuse/releases/tag/v4.30.0). This chart moves from Langfuse 3.x to v4. Read the [v3 to v4 upgrade guide](https://langfuse.com/self-hosting/upgrade/upgrade-guides/upgrade-v3-to-v4).
+
+    **Back up Langfuse data before upgrading.** Existing ClickHouse 25.5 data is not reused.
+
+    **Breaking change**
+
+    - Self-hosted v4 defaults to `events_only` write mode. Legacy `trace-create` / `span-create` events on `/api/public/ingestion` are rejected. Send traces through OpenTelemetry to `/api/public/otel/v1/traces`, or use a v4-compatible SDK.
+    - ClickHouse 25.12 or later is required. This chart ships `clickhouse/clickhouse-server:26.4`.
+    - The public `/api/public/traces` list API is not available in `events_only` mode.
+
+    **What's changed**
+
+    - Tracing uses the v4 observations-first data model.
+    - Experiment results can be compared by score columns and by run.
+
+    **Olares deployment changes**
+
+    - The web process needs about 3Gi of memory. Smaller limits can stop the UI with an out-of-memory error.
+    - ClickHouse data is stored under a new `clickhouse-26` directory. A previous 25.5 dataset will not load.
+
+  developer: Langfuse GmbH
+  website: https://langfuse.com
+  sourceCode: https://github.com/langfuse/langfuse
+  submitter: Olares
+  locale:
+    - en-US
+    - zh-CN
+    - de-DE
+    - es-ES
+    - it-IT
+    - fr-FR
+    - ja-JP
+  doc: https://langfuse.com/docs
+  license:
+    - text: Langfuse GmbH
+      url: https://github.com/langfuse/langfuse?tab=License-1-ov-file
+  requiredMemory: 2Gi
+  requiredDisk: 50Mi
+  requiredCpu: 1
+  limitedMemory: 12Gi
+  limitedCpu: 8
+  supportArch:
+    - amd64
+    - arm64
+permission:
+  appData: true
+  appCache: true
+  userData:
+    - Home
+options:
+  apiTimeout: 0
+  allowedOutboundPorts:
+    - 465
+    - 587
+  dependencies:
+    - name: olares
+      version: '>=1.12.6-0'
+      type: system
+middleware:
+  postgres:
+    username: langfuse
+    databases:
+    - name: langfuse

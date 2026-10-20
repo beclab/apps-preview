@@ -1,0 +1,111 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  localai: 1
+metadata:
+  name: localai
+  description: The free, Open Source alternative to OpenAI, Claude and others.
+  icon: https://app.cdn.olares.com/appstore/localai/icon.png
+  appid: localai
+  version: '1.0.19'
+  title: LocalAI
+  categories:
+  - Utilities_v112
+
+permission:
+  appData: true
+  appCache: true
+  appCommon: true
+  userData:
+  - Home
+  externalData: true
+spec:
+  versionName: '4.5.6'
+  featuredImage: https://app.cdn.olares.com/appstore/localai/1.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/localai/1.webp
+  - https://app.cdn.olares.com/appstore/localai/2.webp
+  - https://app.cdn.olares.com/appstore/localai/3.webp
+  fullDescription: |
+    LocalAI is the free, Open Source OpenAI alternative. LocalAI act as a drop-in replacement REST API that's compatible with OpenAI (Elevenlabs, Anthropic... ) API specifications for local AI inferencing. It allows you to run LLMs, generate images, audio (and not only) locally or on-prem with consumer grade hardware, supporting multiple model families. Does not require GPU.
+
+    **Features**
+    - Text generation with GPTs (llama.cpp, transformers, vllm ... and more)
+    - Text to Audio
+    - Audio to Text (Audio transcription with whisper.cpp)
+    - Image generation
+    - OpenAI-alike tools API
+    - Embeddings generation for vector databases
+    - Constrained grammars
+    - Download Models directly from Huggingface
+    - Vision API
+    - Reranker API
+    - P2P Inferencing
+    - Voice activity detection (Silero-VAD support)
+    - Integrated WebUI!
+
+    **Model storage**
+    - Hugging Face downloads share `appCommon/huggingface` (mounted as `/cache/hf/hub`) with vLLM / llama.cpp LLM base apps.
+    - Model YAML and app-private state live under `appData` (`/models`, `/data`).
+  upgradeDescription: |
+    - Mount shared Hugging Face Hub cache at `appCommon/huggingface` (`HF_HUB_CACHE=/cache/hf/hub`) for reuse with llm-init base apps.
+    - HF mirror from system settings (`OLARES_SYSTEM_HUGGINGFACE_SERVICE`); token from user HF account.
+    - Set `options.apiTimeout: 0` for long LLM streams through the entrance proxy.
+
+  developer: Ettore Di Giacinto
+  website: https://localai.io/
+  sourceCode: https://github.com/mudler/LocalAI
+  submitter: Olares
+  doc: https://localai.io/
+  license:
+  - text: MIT
+    url: https://github.com/mudler/LocalAI#MIT-1-ov-file
+  locale:
+  - en-US
+  - zh-CN
+  accelerator:
+  - mode: nvidia
+    requiredMemory: 2Gi
+    limitedMemory: 16Gi
+    requiredDisk: 20Gi
+    limitedDisk: 100Gi
+    requiredCpu: "1"
+    limitedCpu: "3"
+    requiredGPUMemory: 2Gi
+    limitedGPUMemory: 16Gi
+  supportArch:
+  - amd64
+options:
+  apiTimeout: 0
+  allowedOutboundPorts:
+  - 465
+  - 587
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+entrances:
+- name: localai
+  port: 8080
+  host: localai
+  title: LocalAI
+  icon: https://app.cdn.olares.com/appstore/localai/icon.png
+  openMethod: window
+envs:
+  - envName: HF_ENDPOINT
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_SYSTEM_HUGGINGFACE_SERVICE
+  - envName: HF_TOKEN
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_HUGGINGFACE_TOKEN
+middleware:
+  postgres:
+    username: localai
+    databases:
+    - name: localai

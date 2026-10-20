@@ -1,0 +1,76 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: excalidraw
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: excalidraw
+spec:
+  replicas: {{ .Values.workloads.excalidraw.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: excalidraw
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: excalidraw
+    spec:
+      containers:
+        - name: excalidraw
+          image: "excalidraw/excalidraw@sha256:f7ee194addd607bf831d2af0f0a34463dd4225e426cf35199ef0b12a803398e9"
+          command: ["nginx"]
+          args: ["-g", "daemon off;"]
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+      restartPolicy: Always
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: excalidraw-nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: excalidraw
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: excalidraw
+spec:
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+  selector:
+    io.kompose.service: excalidraw
+status:
+  loadBalancer: {}

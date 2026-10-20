@@ -1,0 +1,39 @@
+metadata:
+  title: Flowise
+  description: '拖放界面构建定制化的LLM流程'
+spec:
+  fullDescription: |
+    Flowise 是一款开源低代码工具，可供开发人员构建定制的 LLM 编排流程和 AI 代理
+
+    **功能**
+    快速迭代
+    - 开发 LLM 应用需要无数次迭代。通过低代码方法，我们可以实现从测试到生产的快速迭代
+
+    LLM 编排
+    - 将 LLM 与内存、数据加载器、缓存、审核等连接起来。（Langchain、LlamaIndex、100 多个集成）
+
+    代理和助手
+    - 创建可以使用工具执行不同任务的自主代理。（自定义工具、OpenAI 助手、功能代理）
+
+    API、SDK、嵌入
+    - 使用 API、SDK 和嵌入式聊天扩展和集成到您的应用程序
+
+    开源 LLM
+    - 使用本地 LLM、嵌入和矢量数据库在隔离环境中运行
+
+  upgradeDescription: |
+    上游发布：[Flowise 3.1.4](https://github.com/FlowiseAI/Flowise/releases/tag/flowise%403.1.4)
+
+    **主要更新**
+
+    - 租户、工作区、会话、SSO 和角色校验更严格。
+    - 自定义 MCP stdio 命令受运营者控制的允许列表限制。
+    - 组织用户记录在使用前会经过净化。
+
+    **修复**
+
+    - Web 抓取器和部分聊天模型会遵守拒绝列表。
+    - 流程导出不再泄漏变量值。
+    - 请求日志不再记录登录密码或 SSO token。
+
+    官方 `flowiseai/flowise:3.1.4` 镜像的 `/api/v1/version` 仍可能返回 `3.1.2`。这是上游镜像打包问题，不是 Olares chart 引用错误。

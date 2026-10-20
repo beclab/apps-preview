@@ -1,0 +1,86 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  tensorzeroingress: 1
+  tensorzero: 1
+metadata:
+  name: tensorzero
+  description: An open-source LLMOps platform
+  icon: https://app.cdn.olares.com/appstore/tensorzero/icon.png
+  appid: tensorzero
+  version: '1.0.19'
+  title: TensorZero
+  categories:
+  - Utilities_v112
+  - agents
+  tags:
+  - gateway
+
+permission:
+  appData: true
+  appCache: true
+spec:
+  upgradeDescription: |
+    TensorZero 2026.6.0 fixes a high-risk vulnerability in the gateway.
+
+    [Release notes](https://github.com/tensorzero/tensorzero/releases/tag/2026.6.0)
+  versionName: '2026.6.0'
+  promoteImage:
+    - https://app.cdn.olares.com/appstore/tensorzero/1.webp
+    - https://app.cdn.olares.com/appstore/tensorzero/2.webp
+    - https://app.cdn.olares.com/appstore/tensorzero/3.webp
+  fullDescription: |
+    TensorZero is an open-source LLMOps platform that unifies:
+
+    - **Gateway:** access every LLM provider through a unified API, built for performance (<1ms p99 latency)
+    - **Observability:** store inferences and feedback in your database, available programmatically or in the UI
+    - **Evaluation:** benchmark individual inferences or end-to-end workflows using heuristics, LLM judges, etc.
+    - **Optimization:** collect metrics and human feedback to optimize prompts, models, and inference strategies
+    - **Experimentation:** ship with confidence with built-in A/B testing, routing, fallbacks, retries, etc.
+
+    [Documentation](https://www.tensorzero.com/docs)
+  developer: TensorZero
+  website: https://www.tensorzero.com/
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  requiredMemory: 1.75Gi
+  limitedMemory: 7.5Gi
+  requiredDisk: 512Mi
+  limitedDisk: 2Gi
+  requiredCpu: 0.5
+  limitedCpu: 4.5
+  doc: https://www.tensorzero.com/docs
+  supportArch:
+  - amd64
+  - arm64
+options:
+  apiTimeout: 0
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+entrances:
+  - authLevel: internal
+    host: tensorzeroingress
+    icon: https://app.cdn.olares.com/appstore/tensorzero/icon.png
+    name: tensorzero
+    openMethod: window
+    port: 8080
+    title: TensorZero
+middleware:
+  postgres:
+    username: tensorzero
+    databases:
+      - name: tensorzerodb
+        distributed: false
+        extensions:
+          - vector

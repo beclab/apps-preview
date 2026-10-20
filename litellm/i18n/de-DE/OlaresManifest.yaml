@@ -1,0 +1,21 @@
+metadata:
+  title: LiteLLM
+  description: Über 100 LLMs im OpenAI-Format aufrufen
+spec:
+  fullDescription: |
+    LiteLLM ist ein Python-SDK und Proxy-Server (AI Gateway), um über 100 LLM-APIs im OpenAI- (oder nativen) Format aufzurufen – mit Kostenverfolgung, Guardrails, Load Balancing und Logging.
+    
+    **Funktionen**
+    - Unified API: Über 100 LLM-APIs (OpenAI, Anthropic, Azure, Bedrock, VertexAI usw.) im OpenAI-Format aufrufen
+    - Cost Tracking: Kosten über alle Anbieter hinweg verfolgen
+    - Load Balancing: Anfragen auf mehrere Modelle/Endpunkte verteilen
+    - Guardrails: Inhaltsfilterung und Sicherheitsprüfungen
+    - Logging & Observability: Umfassendes Logging und Monitoring
+    - Rate Limiting: Integriertes Rate Limiting und Throttling
+    - Proxy Server: Als AI Gateway/Proxy-Server bereitstellen
+    - Multi-tenant: Unterstützung für mehrere Benutzer und Teams
+  upgradeDescription: |
+    Chart 1.0.22 aktualisiert den LiteLLM Proxy von v1.83.3-stable auf v1.103.0.
+    Image: docker.io/beclab/berriai-litellm:v1.103.0. Derselbe Digest ist als main-stable veroeffentlicht.
+    Master Key, Admin-Zugang, PostgreSQL-Anbindung und Proxy-Konfiguration bleiben unveraendert. LiteLLM fuehrt Prisma-Migrationen beim Start aus. Existiert public._prisma_migrations, schreibt ein Init-Container vorher ein pg_dump-Archiv nach appData/backups/chart-1.0.22/litellm.dump. Spaetere Starts und eine Datenbank ohne diese Tabelle ueberspringen das.
+    Release Notes: https://github.com/BerriAI/litellm/releases/tag/v1.103.0

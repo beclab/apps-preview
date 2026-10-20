@@ -1,0 +1,28 @@
+{{- $documensoDomainENV := split "," .Values.domain.documenso -}}
+{{- $documensoDomain := index $documensoDomainENV "_0" -}}
+{{- $localDomain := $documensoDomain -}}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: documenso-config
+  namespace: {{ .Release.Namespace }}
+data:
+  PORT: "3000"
+  NEXTAUTH_URL: "https://{{$documensoDomain}}"
+  NEXT_PUBLIC_WEBAPP_URL: "https://{{$documensoDomain}}"
+  NEXT_PRIVATE_INTERNAL_WEBAPP_URL: "https://{{$documensoDomain}}"
+
+  NEXT_PUBLIC_UPLOAD_TRANSPORT: ""
+  NEXT_PRIVATE_UPLOAD_ENDPOINT: ""
+  NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE: ""
+  NEXT_PRIVATE_UPLOAD_REGION: ""
+  NEXT_PRIVATE_UPLOAD_BUCKET: ""
+  NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID: ""
+  NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY: ""
+
+  NEXT_PUBLIC_DOCUMENT_SIZE_UPLOAD_LIMIT: '50'
+
+  NEXT_PUBLIC_DISABLE_SIGNUP: "false"
+  NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH: "/opt/documenso/cert.p12"

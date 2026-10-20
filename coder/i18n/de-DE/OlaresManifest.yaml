@@ -1,0 +1,19 @@
+metadata:
+  title: Coder
+  description: Selbst gehostete Cloud-Entwicklungsumgebungen
+spec:
+  upgradeDescription: |
+    Chart 1.0.23 aktualisiert Coder von v2.31.9 auf v2.36.6.
+    Image: docker.io/beclab/coder-coder:v2.36.6.
+    PostgreSQL-Verbindung, Access-URL und optionaler Anthropic-Key bleiben unveraendert. Coder fuehrt Datenbankmigrationen beim Start aus. Existiert public.schema_migrations, schreibt ein Init-Container vorher ein pg_dump-Archiv nach appData/backups/chart-1.0.23/coder.dump. Spaetere Starts und eine Datenbank ohne diese Tabelle ueberspringen das. Der Liveness-Probe wartet laenger, damit eine Migration nicht abgebrochen wird.
+    v2.36 wandelt vorhandene login_type=none-Konten in Passwort-Login um, blockiert neue OAuth2-Dynamic-Client-Registrierungen ohne oauth2_dcr_enabled und entfernt chat_model_configs.provider.
+    Release Notes: https://github.com/coder/coder/releases/tag/v2.36.6
+  fullDescription: |
+    Coder ist eine selbst gehostete, Open-Source-Cloud-Entwicklungsumgebung, die mit jeder Cloud, IDE, jedem Betriebssystem, Git-Anbieter und IDP funktioniert.
+
+    Coder ermöglicht Organisationen, Entwicklungsumgebungen in ihrer öffentlichen oder privaten Cloud-Infrastruktur einzurichten. Cloud-Entwicklungsumgebungen werden mit Terraform definiert, über einen sicheren Highspeed-Wireguard®-Tunnel verbunden und bei Nichtnutzung automatisch heruntergefahren, um Kosten zu sparen. Coder gibt Engineering-Teams die Flexibilität, die Cloud für die Workloads zu nutzen, die ihnen am meisten nützen.
+
+    - Cloud-Entwicklungsumgebungen in Terraform definieren
+      - EC2-VMs, Kubernetes-Pods, Docker-Container usw.
+    - Leerlaufende Ressourcen automatisch herunterfahren, um Kosten zu sparen
+    - Entwickler in Sekunden statt Tagen onboarden

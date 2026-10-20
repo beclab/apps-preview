@@ -1,0 +1,100 @@
+﻿apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init-config
+  namespace: {{ .Release.Namespace }}
+data:
+  init.sh: |
+    #!/bin/sh
+    set -e
+
+    chown -R 1000:1000 /config
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: prowlarr
+spec:
+  replicas: {{ .Values.workloads.prowlarr.replicaCount }}
+  selector:
+    matchLabels:
+      app: prowlarr
+  strategy:
+    type: Recreate  
+  template:
+    metadata:
+      labels:
+        app: prowlarr
+    spec:
+      initContainers:
+      - name: init-prowlarr
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        command:
+          - sh
+          - '-c'
+          - |
+            sh /init.sh
+        volumeMounts:
+        - mountPath: /config
+          name: prowlarr-config
+        - name: init-config
+          mountPath: /init.sh
+          subPath: init.sh
+        securityContext:
+          runAsUser: 0
+      containers:
+      - env:
+        - name: PGID
+          value: "1000" 
+        - name: PUID
+          value: "1000" 
+        - name: UMASK
+          value: "002"
+        - name: TZ
+          value: Etc/UTC
+        name: prowlarr
+        image: "linuxserver/prowlarr:2.4.0"
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        ports:
+        - containerPort: 9696
+        volumeMounts:
+        - mountPath: /config
+          name: prowlarr-config
+      volumes:
+      - name: prowlarr-config
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.appData }}
+      - name: init-config
+        configMap:
+          name: init-config
+          defaultMode: 438
+          items:
+          - key: init.sh
+            path: init.sh
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+    - protocol: TCP
+      port: 9696
+      targetPort: 9696

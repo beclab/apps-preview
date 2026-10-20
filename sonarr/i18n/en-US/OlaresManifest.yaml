@@ -1,0 +1,23 @@
+metadata:
+  title: Sonarr
+  description: Smart PVR for newsgroup and bittorrent users.
+spec:
+  fullDescription: |
+    Sonarr is a PVR for Usenet and BitTorrent users. It can monitor multiple RSS feeds for new episodes of your favorite shows and will grab, sort and rename them. It can also be configured to automatically upgrade the quality of files already downloaded when a better quality format becomes available.
+
+    **Features:**
+    - Calendar: See all your upcoming episodes in one convenient location.
+    - Manual Search: Find all the releases, choose the one you want and send it right to your download client.
+    - Automatic Failed Download Handling: Sonarr makes failed downloads a thing of the past. Password protected releases, missing repair blocks or virtually any other reason? no worries. Sonarr will automatically block the release and try another one until it finds one that works.
+  upgradeDescription: |
+    Upgrade Sonarr to version 4.0.18 (2026-06-24)
+    Config changes: change olares directory mount path & entrance authlevel.
+    - Change default Olares Home Directory mount path to /olares/userdata/home
+    - Switch container image to linuxserver/sonarr
+    - Entrance auth level changed to internal
+
+    Upgrade Highlights:
+    - [qBittorrent] Backport qBittorrent fixes; reuse authentication cookies for qBittorrent API calls
+    - [Fixes] Login and download client integration improvements for qBittorrent 5.x
+
+    Full release note: https://github.com/Sonarr/Sonarr/releases/tag/v4.0.18.2971

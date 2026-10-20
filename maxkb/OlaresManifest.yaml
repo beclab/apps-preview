@@ -1,0 +1,120 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  maxkb: 1
+metadata:
+  name: maxkb
+  description: Ready-to-use, flexible RAG Chatbot
+  icon: https://app.cdn.olares.com/appstore/maxkb/icon.webp
+  appid: maxkb
+  version: '1.0.20'
+  title: MaxKB
+  categories:
+  - Productivity_v112
+  - agents
+  tags:
+  - rag
+  - knowledge-base
+
+permission:
+  appData: true
+  appCache: true
+  userData:
+    - Home
+spec:
+  versionName: '2.10.6-lts'
+  featuredImage: https://app.cdn.olares.com/appstore/maxkb/1.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/maxkb/1.webp
+  - https://app.cdn.olares.com/appstore/maxkb/2.webp
+  - https://app.cdn.olares.com/appstore/maxkb/3.webp
+  - https://app.cdn.olares.com/appstore/maxkb/4.webp
+  fullDescription: |
+    **Default admin credentials:**
+    username: `admin`
+    password: `MaxKB@123..`
+
+    **Overview**
+    MaxKB = Max Knowledge Base, it is a chatbot based on Large Language Models (LLM) and Retrieval-Augmented Generation (RAG). MaxKB is widely applied in scenarios such as intelligent customer service, corporate internal knowledge bases, academic research, and education.
+
+    **Ready-to-Use:** 
+    Supports direct uploading of documents / automatic crawling of online documents, with features for automatic text splitting, vectorization, and RAG (Retrieval-Augmented Generation). This effectively reduces hallucinations in large models, providing a superior smart Q&A interaction experience.
+
+    **Flexible Orchestration:** 
+    Equipped with a powerful workflow engine and function library, enabling the orchestration of AI processes to meet the needs of complex business scenarios.
+
+    **Seamless Integration:** 
+    Facilitates zero-coding rapid integration into third-party business systems, quickly equipping existing systems with intelligent Q&A capabilities to enhance user satisfaction.
+
+    **Model-Agnostic:** 
+    Supports various large models, including private models (such as DeepSeek, Llama, Qwen, etc.) and public models (like OpenAI, Claude, Gemini, etc.).
+
+  upgradeDescription: |
+    Upgrade to v2.10.6-lts
+
+    Persistence:
+    - On upgrade, the chart copies a PostgreSQL cluster from the old Olares mount (appData/pg) into the official v2 path (/opt/maxkb/data/postgresql/pgdata) when that legacy cluster is the only copy, or larger than a leftover new-path cluster. It does not remount appData/pg at /var/lib/postgresql/data, because the official image treats PG_VERSION there as an unsupported v1 layout and exits.
+
+    Breaking change:
+    - Tencent Hunyuan and the legacy Tencent Cloud providers are merged into a new Tencent Cloud (TokenHub) provider. Existing Hunyuan / old Tencent Cloud models will not work after upgrade; reconfigure them on the Model Providers page.
+
+    Highlights:
+    - Security: chat upload attribution spoofing, cross-tenant document migration, XLSX image decompression DoS, IDOR on problem association, anonymous profile over-serialization, password-reset code brute force, function-library sandbox bypass (CVE-2026-79919), guest session integrity, and hardcoded Django SECRET_KEY
+    - Workflow default model settings for agent, knowledge-base, and tool workflows
+    - Knowledge Base / Agent list selectors now support search during document migration, user input, and "Add to Knowledge Base"
+    - Bug fixes for CSV/Excel import, full-text search, chat logs, workflow file preview, MiniMax H3, and several agent node issues
+
+    Full upgrade details: https://github.com/1Panel-dev/MaxKB/releases/tag/v2.10.6-lts
+  developer: FIT2CLOUD
+  website: https://maxkb.pro/
+  sourceCode: https://github.com/1Panel-dev/MaxKB/
+  submitter: Olares
+  doc: https://docs.maxkb.pro/
+  license:
+  - text: GPL-3.0
+    url: https://github.com/1Panel-dev/MaxKB?tab=readme-ov-file#GPL-3.0-1-ov-file    
+  locale:
+    - en-US
+    - zh-CN
+    - de-DE
+    - es-ES
+    - it-IT
+    - fr-FR
+    - ja-JP
+  accelerator:
+  - mode: nvidia
+    requiredMemory: 4Gi
+    limitedMemory: 12Gi
+    requiredDisk: 20Gi
+    limitedDisk: 120Gi
+    requiredCpu: "1"
+    limitedCpu: "3"
+    requiredGPUMemory: 2Gi
+    limitedGPUMemory: 12Gi
+  supportArch:
+    - amd64
+options:
+  apiTimeout: 0
+  allowedOutboundPorts:
+    - 465
+    - 587
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+  policies:
+    - uriRegex: ^/(ui/login)(/.*)?(\?.*)?$
+      level: one_factor
+      oneTime: false
+      validDuration: 3600s
+      entranceName: maxkb
+entrances:
+- name: maxkb
+  port: 8080
+  host: maxkb
+  title: MaxKB
+  icon: https://app.cdn.olares.com/appstore/maxkb/icon.webp
+  openMethod: window
+  authLevel: public

@@ -1,0 +1,158 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  clawdbot: 1
+  clawdbotingress: 1
+  terminal: 1
+metadata:
+  name: clawdbot
+  icon: https://app.cdn.olares.com/appstore/clawdbot/icon.png
+  description: Personal AI Assistant with Multi-channel Inbox Support
+  appid: clawdbot
+  title: OpenClaw
+  version: 1.0.54
+  categories:
+  - Productivity_v112
+  - Developer Tools
+  - agents
+  tags:
+  - framework
+  - personal-assistant
+  
+entrances:
+- name: terminal
+  port: 80
+  host: terminal
+  title: OpenClaw CLI
+  icon: https://app.cdn.olares.com/appstore/clawdbot/terminal.png
+  openMethod: window
+  authLevel: internal
+- name: clawdbot
+  host: clawdbotingress
+  port: 8080
+  icon: https://app.cdn.olares.com/appstore/clawdbot/icon.png
+  title: Control UI
+  openMethod: window
+- name: gateway
+  host: clawdbot
+  port: 18789
+  title: OpenClaw Gateway
+  icon: https://app.cdn.olares.com/appstore/clawdbot/icon.png
+  invisible: true
+  authLevel: internal
+spec:
+  versionName: '2026.10.5'
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/clawdbot/1.webp
+  - https://app.cdn.olares.com/appstore/clawdbot/2.webp
+  - https://app.cdn.olares.com/appstore/clawdbot/3.webp
+  - https://app.cdn.olares.com/appstore/clawdbot/4.webp
+  - https://app.cdn.olares.com/appstore/clawdbot/5.webp
+  fullDescription: |
+    **OpenClaw** is a _personal AI assistant_ you run on your own devices.
+    It answers you on the channels you already use. It can speak and listen on macOS/iOS/Android, and can render a live Canvas you control. The Gateway is just the control plane — the product is the assistant.
+
+    If you want a personal, single-user assistant that feels local, fast, and always-on, this is it.
+
+    **Tips**
+    Gateway Restart
+    - `openclaw gateway restart` does NOT work in containerized deployments. Use `restart-gateway` to tear down the running gateway, pick up the latest config, and come back online within ~5 seconds. The same sentinel also short-circuits the post-crash 30-second backoff window.
+
+    Supported channels include: 
+    WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, iMessage, BlueBubbles, IRC, Microsoft Teams, Matrix, Feishu, LINE, Mattermost, Nextcloud Talk, Nostr, Synology Chat, Tlon, Twitch, Zalo, Zalo Personal, WeChat, QQ, WebChat.
+
+    **Highlights**
+    - **[Local-first Gateway](https://docs.openclaw.ai/gateway)** — single control plane for sessions, channels, tools, and events.
+    - **[Multi-channel inbox](https://docs.openclaw.ai/channels)** — WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, BlueBubbles (iMessage), iMessage (legacy), IRC, Microsoft Teams, Matrix, Feishu, LINE, Mattermost, Nextcloud Talk, Nostr, Synology Chat, Tlon, Twitch, Zalo, Zalo Personal, WeChat, QQ, WebChat, macOS, iOS/Android.
+    - **[Multi-agent routing](https://docs.openclaw.ai/gateway/configuration)** — route inbound channels/accounts/peers to isolated agents (workspaces + per-agent sessions).
+    - **[Voice Wake](https://docs.openclaw.ai/nodes/voicewake) + [Talk Mode](https://docs.openclaw.ai/nodes/talk)** — wake words on macOS/iOS and continuous voice on Android (ElevenLabs + system TTS fallback).
+    - **[Live Canvas](https://docs.openclaw.ai/platforms/mac/canvas)** — agent-driven visual workspace with [A2UI](https://docs.openclaw.ai/platforms/mac/canvas#canvas-a2ui).
+    - **[First-class tools](https://docs.openclaw.ai/tools)** — browser, canvas, nodes, cron, sessions, and Discord/Slack actions.
+    - **[Companion apps](https://docs.openclaw.ai/platforms/macos)** — macOS menu bar app + iOS/Android [nodes](https://docs.openclaw.ai/nodes).
+    - **[Onboarding](https://docs.openclaw.ai/start/wizard) + [skills](https://docs.openclaw.ai/tools/skills)** — onboarding-driven setup with bundled/managed/workspace skills.
+
+  upgradeDescription: |
+    Avoid recursive ownership and permission rewrites during startup. Prepare only named directories and initialize files as UID/GID 1000, preserving existing user-file permissions. Make Homebrew base refreshes recoverable after interruption and compatible with read-only package files. Existing ownership problems require a separate, explicit repair.
+
+    Fix terminal token access and Doctor checks by sharing the CLI and Gateway process namespace. The recovery terminal remains available during Gateway restarts.
+
+    Chart 1.0.54 updates OpenClaw to 2026.10.5.
+
+    Upstream highlights: improve recovery of interrupted conversations after Gateway restarts; reduce session/history SQLite work and Gateway memory use; refresh downloaded model catalogs without restarting the Gateway and preserve live llama.cpp router context limits and tools on refresh.
+
+    https://github.com/openclaw/openclaw/releases/tag/v2026.10.5
+
+    Chart 1.0.53 updates OpenClaw to 2026.10.1.
+
+    Upstream adds Claude Haiku 5.5 support and migrates existing agents to local Claws. Code Mode store/load values now persist across replies and Gateway restarts.
+
+    This release improves interrupted database and Doctor recovery, state ownership across Docker CLI containers and recreated containers, session continuity, and plugin startup. It also fixes reply delivery, media playback, and several model-provider integrations.
+
+    Olares continues to run the bundled Doctor before application startup and keeps the CLI and Gateway on the same image. Upgrade through Olares Market.
+
+    Back up application data before upgrading. Doctor may migrate persistent state; installing an older image alone does not reverse these migrations.
+
+    Release notes: https://github.com/openclaw/openclaw/releases/tag/v2026.10.1
+
+  developer: Peter Steinberger
+  website: https://openclaw.ai/
+  sourceCode: https://github.com/openclaw/openclaw
+  submitter: heiye1024 & Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  doc: https://docs.openclaw.ai/start/getting-started
+  license:
+  - text: MIT
+    url: https://github.com/openclaw/openclaw#MIT-1-ov-file
+  requiredMemory: 2Gi
+  limitedMemory: 14.5Gi
+  requiredDisk: 50Mi
+  limitedDisk: 10Gi
+  requiredCpu: 2
+  limitedCpu: 14.5
+  supportArch:
+  - amd64
+  - arm64
+permission:
+  appData: true
+  appCache: true
+  userData:
+  - Home
+  externalData: true
+options:
+  allowMultipleInstall: true
+  apiTimeout: 0
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+envs:
+- envName: ALLOW_HOME_DIR_ACCESS
+  type: bool
+  required: false
+  applyOnChange: true
+  editable: true
+  default: "false"
+  description: "Allow OpenClaw to access Home directory on Olares"
+- envName: ALLOW_EXTERNAL_DIR_ACCESS
+  type: bool
+  required: false
+  applyOnChange: true
+  editable: true
+  default: "false"
+  description: "Allow OpenClaw to access External directory on Olares"
+- envName: GOG_KEYRING_PASSWORD
+  type: password
+  required: false
+  applyOnChange: true
+  editable: true
+  default: "olares"
+  description: "Passphrase for the gog CLI keyring. You will need to re-authenticate after changing this value."

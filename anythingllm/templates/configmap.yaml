@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: anythingllm-config
+  namespace: {{ .Release.Namespace }}
+data:
+  # Base configuration
+  UID: "1000"
+  GID: "1000"
+
+  DEBUG: "true"
+  STORAGE_DIR: "/app/server/storage"
+
+  # Vector database
+  VECTOR_DB: "lancedb"
+
+  # Audio processing
+  WHISPER_PROVIDER: "local"
+  TTS_PROVIDER: "native"
+
+  # Security settings
+  PASSWORDMINCHAR: "8"
+
+  TARGET_OCR_LANG: "eng,chi_sim"

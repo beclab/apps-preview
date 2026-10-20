@@ -1,0 +1,39 @@
+metadata:
+  description: 跨平台 BitTorrent 下载客户端
+  title: Transmission
+spec:
+  fullDescription: |
+    Transmission 是一个快速、简单且免费的 BitTorrent 客户端。
+
+    **功能亮点**
+    简单且强大
+    - Transmission 设计注重易用性和强大功能。我们已经为用户预设了默认配置，开箱即用；只需几步即可设置高级功能，比如监视目录、不良节点屏蔽列表和网页界面。
+
+    原生系统集成
+    - 与许多跨平台应用不同，Transmission 能够无缝地与您的操作系统集成。
+
+
+    开源与隐私保护
+    - 与某些 BitTorrent 客户端不同，Transmission 不以盈利为目的“套路”用户：没有工具栏、弹窗广告、Flash 广告、Twitter 工具或其他捆绑内容。不限制部分功能做收费版本。源代码完全开放。我们不会跟踪用户，我们的网站和论坛也没有第三方广告或分析代码。
+
+    界面简洁，功能丰富
+    - Transmission 提供用户真正需要的 BitTorrent 客户端功能，并配以易用的界面：隐私保护、网页界面、完善的节点通信、Tracker 编辑、速度限制等。
+
+  upgradeDescription: |
+    升级 Transmission 至版本 4.1.2（2025-06-02）
+    配置变更：统一下载目录 & 入口认证级别。
+    - 变更默认 Olares Home 目录挂载路径为 /olares/userdata/home
+    - 添加 Olares External 目录挂载路径为 /olares/userdata/external
+    - 保留旧版 /downloads 挂载以兼容已有配置
+    - 新安装通过 settings.json 设置默认下载路径：Home/Downloads/transmission
+    - 入口认证级别更改为 internal
+    - 切换容器镜像为 linuxserver/transmission
+
+    升级亮点：
+    - 【亮点】修复 4.1.0 可能向 tracker 重复发送 HTTP announce 的问题
+    - 【全平台】修复下载卡在 99%；修复 4.1.0 TCP 节点连接回归；修复升级覆盖 utp_enabled/tcp_enabled；拒绝无效 benc 数据；增加 HTTP 点击劫持防护；UTF-8 节点客户端名称清理
+    - 【Web 客户端】修复下拉菜单时间戳显示；修复重连后种子状态显示错误
+    - 【Qt/GTK】修复 4.1.0 崩溃和设置迁移问题
+    - 【macOS】修复 4.1.0 内存泄漏；降低 UI CPU 占用
+
+    完整发布说明：https://github.com/transmission/transmission/releases/tag/4.1.2

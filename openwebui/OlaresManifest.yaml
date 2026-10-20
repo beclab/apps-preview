@@ -1,0 +1,152 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  openwebui: 1
+metadata:
+  name: openwebui
+  title: Open WebUI
+  description: User-friendly WebUI for LLMs
+  icon: https://app.cdn.olares.com/appstore/openwebui/icon.png
+  version: '1.0.47'
+  appid: openwebui
+  categories:
+  - Utilities_v112
+  - agents
+  tags:
+  - workbench
+  
+entrances:
+- authLevel: private
+  host: openwebui
+  icon: https://app.cdn.olares.com/appstore/openwebui/icon.png
+  name: openwebui
+  openMethod: default
+  port: 8080
+  title: Open WebUI
+spec:
+  versionName: '0.12.0'
+  featuredImage: https://app.cdn.olares.com/appstore/openwebui/1.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/openwebui/1.webp
+  - https://app.cdn.olares.com/appstore/openwebui/2.webp
+  - https://app.cdn.olares.com/appstore/openwebui/3.webp
+  - https://app.cdn.olares.com/appstore/openwebui/4.webp
+  fullDescription: |
+    Open WebUI(Formerly Ollama WebUI) is an extensible, feature-rich, and user-friendly self-hosted WebUI designed to operate entirely offline. It supports various LLM runners, including Ollama and OpenAI-compatible APIs. For more information, be sure to check out our Open WebUI Documentation.
+
+    **Key Features of Open WebUI**
+    - Ollama/OpenAI API Integration: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Ollama models. Customize the OpenAI API URL to link with LMStudio, GroqCloud, Mistral, OpenRouter, and more.
+
+    - Pipelines, Open WebUI Plugin Support: Seamlessly integrate custom logic and Python libraries into Open WebUI using Pipelines Plugin Framework. Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. Examples include Function Calling, User Rate Limiting to control access, Usage Monitoring with tools like Langfuse, Live Translation with LibreTranslate for multilingual support, Toxic Message Filtering and much more.
+
+    - Responsive Design: Enjoy a seamless experience across Desktop PC, Laptop, and Mobile devices.
+
+    - Progressive Web App (PWA) for Mobile: Enjoy a native app-like experience on your mobile device with our PWA, providing offline access on localhost and a seamless user interface.
+
+    - Full Markdown and LaTeX Support: Elevate your LLM experience with comprehensive Markdown and LaTeX capabilities for enriched interaction.
+
+    - Hands-Free Voice/Video Call: Experience seamless communication with integrated hands-free voice and video call features, allowing for a more dynamic and interactive chat environment.
+
+    - Model Builder: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through Open WebUI Community integration.
+
+    - Native Python Function Calling Tool: Enhance your LLMs with built-in code editor support in the tools workspace. Bring Your Own Function (BYOF) by simply adding your pure Python functions, enabling seamless integration with LLMs.
+
+    - Local RAG Integration: Dive into the future of chat interactions with groundbreaking Retrieval Augmented Generation (RAG) support. This feature seamlessly integrates document interactions into your chat experience. You can load documents directly into the chat or add files to your document library, effortlessly accessing them using the # command before a query.
+
+    - Web Search for RAG: Perform web searches using providers like SearXNG, Google PSE, Brave Search, serpstack, serper, Serply, DuckDuckGo and TavilySearch and inject the results directly into your chat experience.
+
+    - Web Browsing Capability: Seamlessly integrate websites into your chat experience using the # command followed by a URL. This feature allows you to incorporate web content directly into your conversations, enhancing the richness and depth of your interactions.
+
+    - Image Generation Integration: Seamlessly incorporate image generation capabilities using options such as AUTOMATIC1111 API or ComfyUI (local), and OpenAI's DALL-E (external), enriching your chat experience with dynamic visual content.
+
+    - Many Models Conversations: Effortlessly engage with various models simultaneously, harnessing their unique strengths for optimal responses. Enhance your experience by leveraging a diverse set of models in parallel.
+
+    - Role-Based Access Control (RBAC): Ensure secure access with restricted permissions; only authorized individuals can access your Ollama, and exclusive model creation/pulling rights are reserved for administrators.
+
+    - Multilingual Support: Experience Open WebUI in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors!
+
+    - Continuous Updates: We are committed to improving Open WebUI with regular updates, fixes, and new features.
+
+  upgradeDescription: |
+    Chart **1.0.47** — Open WebUI **v0.12.0**.
+    - Realtime voice calls with animated 3D avatars (requires OpenAI Realtime configuration).
+    - Two-factor login with authenticator apps and recovery codes.
+    - Shared chats can allow replies, with message authors and live typing indicators.
+    - Multi-file skills, URL imports, and version history for skills, models, tools and functions.
+    - Knowledge bases gain a file browser with original-file previews and editable extracted text.
+    - Custom model controls, nested groups and default models per group.
+    - Experimental Tool Search loads tool definitions on demand with native function calling.
+    - Security, access-control and stability fixes.
+    - https://github.com/open-webui/open-webui/releases/tag/v0.12.0
+
+  developer: OpenWebUI
+  website: https://openwebui.com/
+  sourceCode: https://github.com/open-webui/open-webui
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  doc: https://docs.openwebui.com/
+  license:
+  - text: MIT
+    url: https://github.com/open-webui/open-webui?tab=MIT-1-ov-file#readme
+  limitedCpu: 4000m
+  limitedDisk: 10Gi
+  requiredCpu: 50m
+  requiredDisk: 100Mi
+  requiredMemory: 512Mi
+  limitedMemory: 8Gi
+  supportArch:
+  - amd64
+  - arm64
+permission:
+  appCache: true
+  appData: true
+options:
+  apiTimeout: 0
+  analytics:
+    enabled: false
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+  resetCookie:
+    enabled: false
+envs:
+- envName: HF_HUB_OFFLINE
+  required: false
+  type: bool
+  editable: true
+  applyOnChange: true
+  default: "false"
+- envName: HF_TOKEN
+  required: false
+  applyOnChange: true
+  valueFrom:
+    envName: OLARES_USER_HUGGINGFACE_TOKEN
+- envName: HF_ENDPOINT
+  required: true
+  applyOnChange: true
+  valueFrom:
+    envName: OLARES_USER_HUGGINGFACE_SERVICE
+- envName: ENABLE_WEBUI_DB_BACKUP
+  required: false
+  type: bool
+  editable: true
+  applyOnChange: true
+  default: "true"
+  description: "Create and integrity-check a SQLite backup including committed WAL data once per new chart version before the app starts (saved to data/backups/ on the same appData volume). Recommended before upgrades that include schema migrations. Set to false to skip the backup for a rollout."
+- envName: ENABLE_WEBUI_SECRET_KEY_PERSIST
+  required: false
+  type: bool
+  editable: true
+  applyOnChange: true
+  default: "true"
+  description: "Persist the WebUI secret key to data/.webui_secret_key on the appData volume so login sessions survive restarts and upgrades. The secret key signs login tokens (JWT); keeping it stable also preserves data encrypted with it. Set to false to regenerate the key on every restart, which signs all users out each time the app restarts."

@@ -1,0 +1,16 @@
+workloads:
+  agentj:
+    replicaCount: 1
+  terminal:
+    replicaCount: 1
+# The app's own image (agentjarvis/olares/image): Agent J (the version below), OpenCode, uv and bubblewrap, all pinned at
+# build time. `digest` pins the multi-arch index once it is pushed; while it is empty the tag is used (local tests).
+# New Agent J versions come as a new image + chart version (an app upgrade in Market); Agent J's own upgrades are off.
+image:
+  repository: ghcr.io/preangelleo/agentj-olares
+  tag: 0.23.1a1
+  digest: "sha256:fd53f4b476ee58dc66888a13928926c648ad62dfc7d0293ac4bd2c149f162f12"
+agentj:
+  version: 0.23.1a1
+  wheelSha256: 151de497b1fb039a7daf532634bb55e36ead3f9890043f059f97f574a2821957
+  accountUrl: https://agentj.app/account

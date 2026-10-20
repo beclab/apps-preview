@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: navidrome
+  name: navidrome
+  namespace: '{{ .Release.Namespace }}'
+spec:
+  replicas: {{ .Values.workloads.navidrome.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: navidrome
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: navidrome
+    spec:
+      initContainers:
+        - name: init-chmod-data
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - '-c'
+            - |
+              set -e
+              mkdir -p /app-data-root/data
+              chown 1000:1000 /app-data-root /app-data-root/data /userdata
+          resources: {}
+          volumeMounts:
+            - name: app-data-root
+              mountPath: /app-data-root
+            - name: userdata
+              mountPath: /userdata
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          securityContext:
+            runAsUser: 0
+      containers:
+      - env:
+        - name: PGID
+          value: "1000"
+        - name: PUID
+          value: "1000"
+        - name: TZ
+          value: Etc/UTC
+        image: "docker.io/beclab/deluan-navidrome:0.64.2"
+        imagePullPolicy: IfNotPresent
+        name: navidrome
+        ports:
+        - containerPort: 4533
+        resources:
+          limits:
+            cpu: "1"
+            memory: 4Gi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+        volumeMounts:
+        - mountPath: /music
+          name: userdata
+        - mountPath: /data
+          name: data
+      restartPolicy: Always
+      volumes:
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}/navidrome'
+          type: DirectoryOrCreate
+        name: app-data-root
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}/navidrome/data'
+          type: DirectoryOrCreate
+        name: data
+      - hostPath:
+          path: '{{ .Values.userspace.userData }}/Music'
+          type: DirectoryOrCreate
+        name: userdata
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: navidrome
+  name: navidrome
+  namespace: '{{ .Release.Namespace }}'
+spec:
+  ports:
+  - name: "4533"
+    port: 4533
+    targetPort: 4533
+  selector:
+    io.kompose.service: navidrome
+status:
+  loadBalancer: {}

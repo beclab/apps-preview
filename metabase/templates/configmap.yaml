@@ -1,0 +1,31 @@
+{{- $metabaseDomainENV := split "," .Values.domain.metabase -}}
+{{- $metabaseDomain := index $metabaseDomainENV "_0" -}}
+{{- $localDomain := $metabaseDomain -}}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metabase-config
+  namespace: {{ .Release.Namespace }}
+data:
+  # base
+  MB_DB_TYPE: "postgres"
+  MB_DB_HOST: "{{ .Values.postgres.host }}"
+  MB_DB_PORT: "{{ .Values.postgres.port }}"
+  MB_DB_USER: "{{ .Values.postgres.username }}"
+  MB_DB_PASS: "{{ .Values.postgres.password }}"
+  MB_DB_DBNAME: "{{ .Values.postgres.databases.metabase }}"
+  MB_DB_CONNECTION_URI: "postgresql://{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.databases.metabase }}?user={{ .Values.postgres.username }}&password={{ .Values.postgres.password }}"
+  MB_SITE_URL: "https://{{$metabaseDomain}}"
+  MB_JETTY_HOST: "0.0.0.0"
+  MB_JETTY_PORT: "3000"
+
+  # smtp
+  MB_EMAIL_SMTP_HOST: "{{ .Values.olaresEnv.MB_EMAIL_SMTP_HOST }}"
+  MB_EMAIL_SMTP_PORT: "{{ .Values.olaresEnv.MB_EMAIL_SMTP_PORT }}"
+  MB_EMAIL_SMTP_USERNAME: "{{ .Values.olaresEnv.MB_EMAIL_SMTP_USERNAME }}"
+  MB_EMAIL_SMTP_PASSWORD: "{{ .Values.olaresEnv.MB_EMAIL_SMTP_PASSWORD }}"
+  MB_EMAIL_SMTP_SECURITY: "{{ .Values.olaresEnv.MB_EMAIL_SMTP_SECURITY }}"
+  MB_EMAIL_FROM_ADDRESS: "{{ .Values.olaresEnv.MB_EMAIL_FROM_ADDRESS }}"
+  MB_EMAIL_FROM_NAME: "{{ .Values.olaresEnv.MB_EMAIL_FROM_NAME }}"

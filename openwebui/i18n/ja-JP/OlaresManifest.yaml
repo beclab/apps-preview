@@ -1,0 +1,50 @@
+metadata:
+  title: Open WebUI
+  description: LLM 向けの使いやすい WebUI
+spec:
+  fullDescription: |
+    Open WebUI（旧称 Ollama WebUI）は、完全オフラインで動作するよう設計された、拡張可能で機能豊富、使いやすいセルフホスト WebUI です。Ollama や OpenAI 互換 API を含む各種 LLM ランナーをサポートします。詳細は Open WebUI Documentation をご覧ください。
+
+    **Open WebUI の主な機能**
+    - Ollama/OpenAI API 統合：OpenAI 互換 API を簡単に統合し、Ollama モデルと並んで多彩な会話が可能。OpenAI API URL をカスタムして LMStudio、GroqCloud、Mistral、OpenRouter などと連携。
+
+    - Pipelines、Open WebUI プラグイン対応：Pipelines Plugin Framework でカスタムロジックと Python ライブラリを Open WebUI にシームレス統合。Pipelines インスタンスを起動し、OpenAI URL を Pipelines URL に設定すれば可能性は無限。Function Calling、アクセス制御の User Rate Limiting、Langfuse などの Usage Monitoring、多言語向け LibreTranslate の Live Translation、Toxic Message Filtering など。
+
+    - レスポンシブデザイン：デスクトップ PC、ノート PC、モバイルでシームレスな体験。
+
+    - モバイル向け Progressive Web App（PWA）：ネイティブアプリのような体験。localhost でのオフラインアクセスとシームレスな UI。
+
+    - 完全な Markdown および LaTeX 対応：包括的な Markdown／LaTeX 機能で LLM 体験を向上。
+
+    - ハンズフリー音声／ビデオ通話：統合されたハンズフリー音声・ビデオ通話で、より動的でインタラクティブなチャット環境。
+
+    - Model Builder：Web UI から Ollama モデルを簡単作成。カスタムキャラクター／エージェントの追加、チャット要素のカスタム、Open WebUI Community 連携によるモデルの簡単インポート。
+
+    - ネイティブ Python Function Calling ツール：ツールワークスペースの組み込みコードエディタで LLM を強化。純粋な Python 関数を追加するだけの Bring Your Own Function（BYOF）。
+
+    - ローカル RAG 統合：Retrieval Augmented Generation（RAG）対応でドキュメント対話をチャットにシームレス統合。チャットへ直接ドキュメントを読み込むか、ドキュメントライブラリに追加し、クエリ前に # コマンドでアクセス。
+
+    - RAG 向け Web 検索：SearXNG、Google PSE、Brave Search、serpstack、serper、Serply、DuckDuckGo、TavilySearch などで検索し、結果をチャットへ直接注入。
+
+    - Web 閲覧機能：# コマンドの後に URL を付けてウェブサイトをチャットにシームレス統合。
+
+    - 画像生成統合：AUTOMATIC1111 API や ComfyUI（ローカル）、OpenAI の DALL-E（外部）などで画像生成をシームレスに取り込み。
+
+    - 複数モデル会話：複数モデルと同時に対話し、それぞれの強みを活かして最適な応答を獲得。
+
+    - ロールベースアクセス制御（RBAC）：制限付き権限で安全なアクセスを確保。認可された人のみが Ollama にアクセスでき、モデル作成／取得の独占権は管理者に留保。
+
+    - 多言語対応：国際化（i18n）対応で希望の言語で Open WebUI を体験。対応言語の拡充にご参加ください！コントリビューターを積極募集中。
+
+    - 継続的な更新：定期的な更新、修正、新機能で Open WebUI の改善を継続。
+  upgradeDescription: |
+    Chart **1.0.47** — Open WebUI **v0.12.0**.
+    - リアルタイム音声通話と動く 3D アバターを追加。OpenAI Realtime の設定が必要です。
+    - 認証アプリとリカバリーコードによる二要素ログインに対応。
+    - 共有チャットへの返信を許可でき、投稿者と入力中の状態を表示。
+    - スキルの複数ファイルと URL インポートに対応。スキル、モデル、ツール、関数のバージョン履歴を追加。
+    - ナレッジベースにファイルブラウザーを追加し、元ファイルのプレビューと抽出テキストの編集に対応。
+    - カスタムモデルコントロール、階層化グループ、グループごとの既定モデルを追加。
+    - 実験的な Tool Search が必要なツール定義だけを読み込みます。ネイティブ関数呼び出しが必要です。
+    - セキュリティ、アクセス制御、安定性の問題を修正。
+    - https://github.com/open-webui/open-webui/releases/tag/v0.12.0

@@ -1,0 +1,29 @@
+metadata:
+  title: 'Junior Investor'
+  description: 'Kids learn investing: AI masters, research & paper trading'
+spec:
+  fullDescription: |
+    Junior Investor is a calm, private place for kids and teens (ages 10–18) to learn how good investors think — with virtual money only.
+
+    **Learn first, then unlock**
+
+    - **Learning path** – five levels: Saver → Lender → Index Investor → Stock Picker → Options Apprentice. Each level unlocks a new kind of investment (cash and CDs, bond funds, index funds, individual stocks, then beginner options on shares you own) and adds virtual cash to the learning account. Levels are earned with short lessons (with a quick check question) and historical scenarios.
+    - **Time machine** – travel back to real market history (the 2000 dot-com bubble, the 2007 smartphone revolution, the 2008 financial crisis, the 2020 pandemic, the 2022 rate shock) with company names hidden. Split $10,000, explain why, jump forward in time, then see what really happened.
+    - **Two accounts** – a gamified learning account on a family leaderboard ranked by learning points (never by returns), and a private family account that parents fund with starting cash and scheduled pocket money.
+
+    **Three things to do, one learning loop**
+
+    - **Ask a Master** – chat with AI teaching personas inspired by the publicly documented principles of Warren Buffett, Peter Lynch, Benjamin Graham and Charlie Munger. Answers adapt to the child's age, and any current fact (price, revenue, valuation) is looked up with tools, never guessed.
+    - **Research a company** – type a ticker, a company name or a question ("Why is Costco's valuation so high?"). The Research Agent gathers live quotes, financial statements, valuation metrics, SEC filings and news, then writes a source-cited report (Company in one minute, Business model, Growth drivers, Bull & Bear case, What could change the thesis…). Numbers in tables come straight from the data, not from the AI.
+    - **Practice with a simulated portfolio** – start with virtual cash (default US$1,000,000), buy and sell US stocks and ETFs at real market prices, and track P&L. Every trade asks "Why are you making this trade?" and saves it to an investment journal for later reflection.
+
+    **Built for families**
+
+    - Parent mode protected by a PIN: create child profiles, set starting cash and daily AI limits, reset portfolios, view learning progress.
+    - Fully bilingual (English / 简体中文); Chinese finance terms are shown with their English names and abbreviations.
+    - No real brokerage, no real money, no leverage, no leaderboards, no gamified trading — rewards go to research, journaling and learning.
+    - Local-first: profiles, trades, journals and chats stay on your Olares. Use the AI model running on your Olares, or any OpenAI-compatible cloud model (OpenAI, Claude, Gemini, DeepSeek, OpenRouter, Qwen…) chosen by the parent in Settings.
+
+    Not investment advice. Market data may be delayed.
+  upgradeDescription: |
+    New learning path: five levels that unlock cash & CDs, bond funds, index funds, stocks and beginner options as children learn. Historical time-machine scenarios with hidden company names, lessons with quick checks, learning points, badges and a family leaderboard ranked by learning (not returns). Each child now has a learning account and a private family account with optional scheduled pocket money. Existing portfolios become the family account.

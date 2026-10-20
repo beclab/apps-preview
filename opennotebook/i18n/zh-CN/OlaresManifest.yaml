@@ -1,0 +1,33 @@
+metadata:
+  description: 一个强大的开源、AI驱动的笔记与研究平台，尊重您的隐私
+  title: Open Notebook
+spec:
+  fullDescription: |
+    Open Notebook 是一个开源且注重隐私的笔记工具，是 Google Notebook LM 的极佳替代品！
+
+    在被人工智能主导的世界中，思考与获取新知识的能力不应成为少数人的特权，也不应被单一服务商所限制。
+
+    Open Notebook 让您能够：
+    - 掌控您的数据：让您的研究数据私密且安全
+    - 自由选择 AI 模型：支持 16+ 个提供商，包括 OpenAI、Anthropic、Ollama、LM Studio 等 — 均可通过界面配置
+    - 高效管理多模态内容：支持 PDF、视频、音频、网页等多种内容
+    - 生成专业播客：具备先进的多说话人播客生成能力
+    - 智能检索：全文检索与向量检索结合，轻松搜索一切内容
+    - 上下文对话：由您研究内容驱动的 AI 智能对话
+
+  upgradeDescription: |
+    Chart 重构，对齐 Open Notebook 1.14.0 上游部署方式。
+
+    部署变更：
+    - 单一数据卷 `/app/data`（uploads、podcasts、cache 均在其下）
+    - 使用官方 `docker-entrypoint.sh` 支持按需安装 Docling/Crawl4AI
+    - `FRONTEND_BIND_HOST=0.0.0.0` 替代已废弃的 `HOSTNAME` 绑定方式
+    - 移除 SQLite 种子、config.toml 初始化及 appCache 迁移等遗留 init 容器
+    - 一次性 init 将旧 host 路径 `uploads/`、`config/` 合并进 `/app/data`，便于升级
+    - 设置 `OPEN_NOTEBOOK_EMBEDDING_BATCH_SIZE=1`，兼容 llama.cpp 类嵌入后端
+
+    Open Notebook 1.14.0 — 应用/数据库使用官方镜像，不经 beclab 转存：
+    - 应用：`lfnovo/open_notebook:1.14.0`
+    - 数据库：`surrealdb/surrealdb:v2`
+
+    完整发布说明：https://github.com/lfnovo/open-notebook/releases/tag/v1.14.0

@@ -1,0 +1,26 @@
+{{- $nextcloudDomainENV := split "," .Values.domain.nextcloud -}}
+{{- $nextcloudDomain := index $nextcloudDomainENV "_0" -}}
+{{- $entrancePrefix := index (splitList "." $nextcloudDomain) 0 -}}
+{{- $localDomain := printf "%s.%s.olares.local" $entrancePrefix .Values.bfl.username -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nextcloud-config
+  namespace: {{ .Release.Namespace }}
+data:
+  zz-olares.config.php: |-
+    <?php
+    $CONFIG['allow_local_remote_servers'] = true;
+    $domains = getenv('NEXTCLOUD_TRUSTED_DOMAINS');
+    if ($domains !== false && $domains !== '') {
+      $CONFIG['trusted_domains'] = array_values(array_unique(array_merge(array_filter(array_map('trim', explode(' ', $domains))), ['{{ .Release.Name }}-svc'])));
+    }
+
+    $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+    $host = preg_replace('/:\d+$/', '', $host);
+    if (preg_match('/(^|\.)olares\.local$/', $host)) {
+      $CONFIG['overwriteprotocol'] = 'http';
+    } else {
+      $CONFIG['overwriteprotocol'] = 'https';
+    }

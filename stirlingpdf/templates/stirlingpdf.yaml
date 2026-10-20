@@ -1,0 +1,146 @@
+﻿{{- $enableLogin := .Values.olaresEnv.SECURITY_ENABLELOGIN | default "true" | toString -}}
+{{- $enableStorage := .Values.olaresEnv.STORAGE_ENABLED | default "true" | toString -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: stirlingpdf
+  name: stirlingpdf
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.stirlingpdf.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: stirlingpdf
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: stirlingpdf
+      annotations:
+        # Force rollout when login/storage app envs change.
+        checksum/login-env: {{ printf "%s:%s:%s" $enableLogin $enableStorage (.Values.olaresEnv.SECURITY_INITIALLOGIN_USERNAME | default "admin" | toString) | sha256sum }}
+    spec:
+      containers:
+        - image: docker.io/stirlingtools/stirling-pdf:3.0.0-fat
+          name: stirlingpdf
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: Etc/UTC
+            - name: DISPLAY
+              value: ':0'
+            # Direct env bindings so applyOnChange re-renders + restarts this workload.
+            - name: SECURITY_ENABLELOGIN
+              value: {{ $enableLogin | quote }}
+            - name: DOCKER_ENABLE_SECURITY
+              value: {{ $enableLogin | quote }}
+            - name: STORAGE_ENABLED
+              value: {{ $enableStorage | quote }}
+            - name: STORAGE_PROVIDER
+              value: "local"
+            - name: STORAGE_LOCAL_BASEPATH
+              value: "/storage"
+            {{- if eq $enableLogin "true" }}
+            - name: SECURITY_INITIALLOGIN_USERNAME
+              value: {{ .Values.olaresEnv.SECURITY_INITIALLOGIN_USERNAME | default "admin" | quote }}
+            {{- if .Values.olaresEnv.SECURITY_INITIALLOGIN_PASSWORD }}
+            - name: SECURITY_INITIALLOGIN_PASSWORD
+              value: {{ .Values.olaresEnv.SECURITY_INITIALLOGIN_PASSWORD | quote }}
+            {{- end }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: stirlingpdf-config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 4Gi
+          volumeMounts:
+            - mountPath: /usr/share/tessdata
+              name: training-data
+            - mountPath: /configs
+              name: extra-configs
+            - mountPath: /customFiles/
+              name: custom-files
+            - mountPath: /logs/
+              name: logs
+            - mountPath: /pipeline/
+              name: pipeline
+            - mountPath: /storage
+              name: file-storage
+          livenessProbe:
+            httpGet:
+              # / returns 401 when SECURITY_ENABLELOGIN=true; status endpoint stays public.
+              path: /api/v1/info/status
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /api/v1/info/status
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 6
+            successThreshold: 1
+            timeoutSeconds: 5
+
+      volumes:
+        - name: training-data
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}/trainingData'
+        - name: extra-configs
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}/extraConfigs'
+        - name: custom-files
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}/customFiles'
+        - name: logs
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}/logs'
+        - name: pipeline
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}/pipeline'
+        - name: file-storage
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}/storage'
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stirlingpdf
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: stirlingpdf
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    io.kompose.service: stirlingpdf

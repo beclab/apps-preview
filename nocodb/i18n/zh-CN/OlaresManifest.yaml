@@ -1,0 +1,41 @@
+metadata:
+  description: Airtable 开源替代产品。
+  title: NocoDB
+spec:
+  fullDescription: |
+    NocoDB 使得构建无代码数据库解决方案像使用电子表格一样简单。
+
+    NocoDB 提供了一个直观的电子表格界面，用户可以从零开始或者连接现有数据库来创建在线数据库。您可以把 MySQL、PostgreSQL、SQL Server、SQLite 和 MariaDB 等数据库转换成智能电子表格，并通过看板、表单、画廊等交互式界面或通过 API 和 SQL 访问数据。
+
+    功能介绍
+    * 多视图和多元单元格类型的电子表格界面。
+    * 与团队共享数据库和视图。
+    * 提供多层次的细致访问控制。
+    * 与聊天、邮件和存储服务无缝结合，实现工作流自动化。
+    * 通过 REST API 或 NocoDB SDK 进行编程操作。
+    * 在 NocoDB GUI 外同步架构更改。
+    * 保存所有用户操作的审计日志。
+
+  upgradeDescription: |
+    升级至 **2026.09.0**（`nocodb/nocodb:2026.09.0`）。
+
+    将 `NC_THUMBNAIL_MAX_SIZE` 设为 100 MiB，列表/网格视图使用生成的缩略图，
+    而不是加载原图（NocoDB 默认阈值为 3 MiB）。
+
+    **重点更新**
+    * 加入 Claude Connectors；MCP 工具从 11 个扩展到 149 个
+    * 工作流富文本邮件（付费 / 授权版）
+    * 界面页按钮；列表视图拖放；内联创建关联字段
+    * 工作流日期助手 `$now()` / `$dateAdd()`；更快的看板成为默认
+    * 大表 Excel 导出改为流式下载
+    * Community 模式仍显示工作流、界面和文件夹
+    * API Token、分享视图、评论和表可见性的安全加固
+
+    **环境变量 / 启动参数**
+    * `NC_DB` 连接串格式未变（`pg://host:port?u=&p=&d=`）
+    * 数据目录仍为 `/usr/app/data`；HTTP 端口仍为 `8080`
+    * `NC_THUMBNAIL_MAX_SIZE=104857600`（与 `NC_ATTACHMENT_FIELD_SIZE` 对齐）
+    * 本次升级无新增必需启动参数
+
+    完整发布说明: https://github.com/nocodb/nocodb/releases/tag/2026.09.0
+

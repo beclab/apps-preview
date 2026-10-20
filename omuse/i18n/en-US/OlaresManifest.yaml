@@ -1,0 +1,35 @@
+metadata:
+  title: 'OMuse'
+  description: 'Your private AI agent'
+spec:
+  fullDescription: |
+    OMuse is a private AI agent that lives on your Olares — local-first, private by default and always on. It doesn't just chat: it plans multi-step tasks and carries them out across your email, documents, team chat and the web, and it asks before doing anything that matters.
+
+    **What it does**
+
+    - **Chat → plan → act** – describe what you need; OMuse makes a plan and works through it step by step, showing every tool call.
+    - **Email** – Gmail, Outlook / Hotmail, Yahoo, iCloud, QQ Mail, NetEase 163 / 126, Zoho, AOL or any IMAP mailbox: search, read, draft, reply and send across several mailboxes; one-click unsubscribe from newsletters. Sign-in codes and reset links are hidden from the model.
+    - **Notion & Slack** – look things up, write reports into Notion, update task boards, read channels and threads, post messages.
+    - **Web browser** – its own Chromium with a restricted API (no arbitrary JavaScript), live view, and human takeover for logins and CAPTCHAs.
+    - **MCP connectors** – plug in any MCP server; tool definitions are pinned so a server can't quietly change them.
+    - **Automations** – goals it keeps pushing for days until they're achieved, event triggers (new email, Slack message, Notion change) and schedules.
+    - **Telegram remote control** – give tasks, follow progress and approve actions with one tap from your phone.
+    - **Memory & skills** – remembers what you ask it to remember, and learns reusable skills.
+
+    **Safe by design**
+
+    - **Sentinel** – an independent guard service decides ALLOW / DENY / ASK for every action. Sending, posting, paying and deleting always wait for your approval.
+    - **Credentials in a vault** – app passwords and tokens are encrypted in Sentinel; the agent and the model never see them.
+    - **Prompt-injection defences** – emails, web pages and tool results are treated as untrusted; suspicious content escalates every write to human approval.
+    - **Audit trail** – every model call, tool call, decision and approval goes into an append-only, hash-chained log.
+
+    Runs on the local models served by your Olares by default — any OpenAI-compatible endpoint works. English and 中文 interface.
+  upgradeDescription: |
+    0.2.45: Phone calls via DialMCP: sign in once (OAuth 2.1) and OMuse calls US/Canadian numbers from your own number, with live listening, recordings and structured call results; MCP servers can now use OAuth sign-in
+    0.2.44: Trip and meeting prep plans start by checking existing bookings, cancellations and delays in your mail
+    0.2.43: Forgetting a memory also removes past-task summaries that quote it; trip and meeting prep checks existing bookings and the timeline
+    0.2.42: Bill payments check for unusual amounts and only use the merchant's own payment link; repeated searches are pointed at the next concrete step
+    0.2.41: New gmail_find_receipts: finds receipts, bills and invoices across all mailboxes and reads the amounts in one step; better suggestions when a mail search keeps failing
+    0.2.40: Local stores for shopping (from your time zone), no more endless plan updates, empty mail searches fall back to the sender, fewer needless approvals on listing links
+    0.2.39: Mail search fixes wrong date formats and hints how to narrow broad or empty searches
+    0.2.38: Batch amount reading from receipts (gmail_read_amounts), safer context handling (no more 'context exceeded' failures), no invented email ids, smarter re-reads, better follow-up and scam detection

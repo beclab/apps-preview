@@ -1,0 +1,29 @@
+{{- $appDomainENV := split "," .Values.domain.notebook -}}
+{{- $appDomain := index $appDomainENV "_0" -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opennotebook-config
+  namespace: {{ .Release.Namespace }}
+data:
+  {{- if $appDomain }}
+  API_URL: "https://{{ $appDomain }}"
+  {{- else }}
+  API_URL: ""
+  {{- end }}
+  INTERNAL_API_URL: "http://localhost:5055"
+  API_CLIENT_TIMEOUT: "600"
+  ESPERANTO_LLM_TIMEOUT: "300"
+  OPEN_NOTEBOOK_ENCRYPTION_KEY: "olares-open-notebook-{{ .Release.Namespace }}"
+  SURREAL_URL: "ws://surrealdb:8000/rpc"
+  SURREAL_USER: "root"
+  SURREAL_PASSWORD: "root"
+  SURREAL_NAMESPACE: "open_notebook"
+  SURREAL_DATABASE: "open_notebook"
+  SURREAL_COMMANDS_RETRY_ENABLED: "true"
+  SURREAL_COMMANDS_RETRY_MAX_ATTEMPTS: "3"
+  SURREAL_COMMANDS_RETRY_WAIT_STRATEGY: "exponential_jitter"
+  SURREAL_COMMANDS_RETRY_WAIT_MIN: "1"
+  SURREAL_COMMANDS_RETRY_WAIT_MAX: "30"
+  OPEN_NOTEBOOK_EMBEDDING_BATCH_SIZE: "1"

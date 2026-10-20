@@ -1,0 +1,27 @@
+metadata:
+  title: Paperclip
+  description: 面向 AI 代理公司的开源编排平台。
+spec:
+  fullDescription: |
+    **首次管理员设置**
+    应用首次启动后，在浏览器打开 Paperclip 地址，注册或登录账号，然后在设置页面选择 **Claim this instance**（认领此实例）即可成为首个管理员。
+
+    **应用概览**
+    Paperclip 是一个 Node.js 服务器和 React UI，用于编排 AI 代理团队来运营业务。接入你自己的代理，分配目标，通过一个仪表盘追踪代理的工作和成本。
+
+    如果说 OpenClaw 是一个员工，那 Paperclip 就是整个公司。
+
+    **功能**
+    - 接入任何代理 - 任何代理、任何运行时、一个组织架构（OpenClaw、Claude Code、Codex、Cursor）
+    - 目标对齐 - 每个任务都追溯到公司使命
+    - 心跳机制 - 代理按计划唤醒、检查工作并行动
+    - 成本控制 - 每个代理的月度预算，自动执行
+    - 多公司 - 一次部署，多个公司，完全数据隔离
+    - 工单系统 - 每次对话都可追踪，完整的工具调用跟踪和审计日志
+    - 治理 - 批准招聘、覆盖策略、暂停或终止任何代理
+    - 组织架构 - 层级、角色、汇报关系
+    - 移动端适配 - 随时随地监控和管理
+    - 支持外部 PostgreSQL 生产部署
+  upgradeDescription: |
+    Paperclip 已升级至 v2026.1005.0。
+    https://github.com/paperclipai/paperclip/releases/tag/v2026.1005.0

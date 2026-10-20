@@ -1,0 +1,28 @@
+metadata:
+  title: NemoClaw
+  description: NVIDIA NemoClaw - サンドボックス分離付き AI コーディングエージェント
+spec:
+  fullDescription: |
+    **概要**
+    NVIDIA NemoClaw は、[OpenClaw](https://openclaw.ai) の常時稼働アシスタントをより安全に実行しやすくするオープンソースのリファレンススタックです。
+    NVIDIA Agent Toolkit の一部である [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell) ランタイムをインストールし、自律エージェント実行に追加のセキュリティを提供します。
+
+    > **アルファ版ソフトウェア**
+    >
+    > NemoClaw は 2026 年 3 月 16 日からアーリープレビューとして提供されています。本番利用向けではありません。インターフェース、API、動作は予告なく変更されることがあります。フィードバック収集と早期実験のために公開されています。進化の過程でコミュニティからの Issue と議論を歓迎します。
+
+    公式ドキュメント: [NemoClaw](https://docs.nvidia.com/nemoclaw/latest/index.html)、[リモートダッシュボード / CHAT_UI_URL](https://docs.nvidia.com/nemoclaw/latest/deployment/deploy-to-remote-gpu.html#remote-dashboard-access)。
+
+    **Olares**
+    - **CLI** — ターミナル; `nemoclaw my-assistant connect` のあと `openclaw tui`。OpenShell: `openshell status` / `openshell doctor`。
+    - **Web UI** — **CHAT_UI_URL** または Olares の **domain.webtui** を設定; チャートが **allowedOrigins** をパッチします。ゲートウェイトークン: `nemoclaw my-assistant gateway-token --quiet`。
+    - **Env** — 必須: **NEMOCLAW_PROVIDER**、**NEMOCLAW_ENDPOINT_URL** (/v1)、**NEMOCLAW_MODEL**。任意: **NEMOCLAW_OPENCLAW_VERSION**（デフォルトはピン留め OpenClaw）、ポリシー階層/モード、ゲートウェイ netns。詳細は英語マニフェストを参照。
+
+  upgradeDescription: |
+    Olares チャート **1.0.30** ではインストール手順を最適化しました。
+    - 起動タスク間で OpenClaw のインストールを直列化し、完了後にゲートウェイを起動します。ゲートウェイ確認の前にランタイムの準備を再試行します。
+    - モデルの接続先を検証し、ゲートウェイからの応答を確認してから入口を開放します。正常性確認では応答を最後まで読み取り、接続の早期切断を防ぎます。
+    - コンポーネントの準備、キャッシュ済みイメージの再利用、モデルサービスへの接続を改善しました。
+    - WebUI、JavaScript、スタイルシート、ゲートウェイの正常性確認がすべて完了してからアプリの入口を利用可能にします。固定の5分間の待機を、実際の準備状況に基づく確認に置き換えました。
+    - OpenClaw の既定の実行バージョンを **2026.6.35** に更新しました。ビルドバージョンは **2026.4.24**、NemoClaw は **v0.0.38** のままです。
+    - 既存のインストールでは保存済みの環境変数が維持されます。新しい実行バージョンを使用するには、**NEMOCLAW_OPENCLAW_VERSION** が古い値のままであれば **2026.6.35** に変更してください。

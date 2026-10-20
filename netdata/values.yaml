@@ -1,0 +1,13 @@
+image:
+  version: 'v2.11.0'
+
+userspace:
+  appdata: ""
+
+postgres:
+  host: local
+  port: 5432
+  password: default
+workloads:
+  netdata:
+    replicaCount: 1

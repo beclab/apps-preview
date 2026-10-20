@@ -1,0 +1,103 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  transmission: 1
+metadata:
+  name: transmission
+  description: Transmission is a cross-platform BitTorrent client
+  icon: https://app.cdn.olares.com/appstore/transmission/icon.png
+  appid: transmission
+  version: '1.0.17'
+  title: Transmission
+  categories:
+  - Utilities_v112
+
+permission:
+  appData: true
+  appCache: true
+  userData:
+  - Home
+  externalData: true
+spec:
+  versionName: '4.1.2'
+  featuredImage: https://app.cdn.olares.com/appstore/transmission/promote_image_1v2.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/transmission/promote_image_1v2.webp
+  - https://app.cdn.olares.com/appstore/transmission/promote_image_2v2.webp
+  - https://app.cdn.olares.com/appstore/transmission/promote_image_3v2.webp
+  - https://app.cdn.olares.com/appstore/transmission/promote_image_4v2.webp
+  fullDescription: |
+    Transmission is a fast, easy, and free BitTorrent client.
+
+    **Features**
+    Easy & Powerful
+    - Transmission is designed for easy, powerful use. We've set the defaults to just work and it only takes a few clicks to configure advanced features like watch directories, bad peer blocklists, and the web interface.
+
+    Native for Your System
+    - Unlike many cross-platform applications, Transmission integrates seamlessly with your operating system.
+
+    Lightweight & Lightning Fast
+    - Transmission has one of the lowest memory & resource footprints of any major BitTorrent client. Transmission's light overhead is one reason why it is so well suited for home NAS and media servers.
+
+    Open Source & Privacy Focused
+    - Unlike some BitTorrent clients, Transmission doesn't play games with its users to make money: Transmission doesn't bundle toolbars, pop-up ads, flash ads, twitter tools, or anything else. It doesn't hold some features back for a payware version. Its source code is available for anyone to review. We don't track our users, and our website and forums have no third-party ads or analytics.
+
+    Sleek & Feature Rich
+    - The features you want from a BitTorrent client with an easy-to-use interface: privacy protection, a web interface, full peer communications, tracker editing, speed limits, and more.
+
+  upgradeDescription: |
+
+    Stop recursively chowning the whole Home on startup; only fix ownership on app-created Downloads paths and appData.
+    Upgrade Transmission to version 4.1.2 (2025-06-02)
+    Config changes: unified download directory & entrance auth level.
+    - Change default Olares Home Directory mount path to /olares/userdata/home
+    - Add Olares External Directory mount path to /olares/userdata/external
+    - Keep legacy /downloads mount for existing configurations
+    - Seed default download paths via settings.json for new installs: Home/Downloads/transmission
+    - Entrance auth level changed to internal
+    - Switch container image to linuxserver/transmission
+
+    Upgrade Highlights:
+    - [Highlights] Fixed 4.1.0 bug that could cause duplicate HTTP announces to trackers
+    - [All Platforms] Fixed downloads stalled at 99%; fixed 4.1.0 TCP peer connection regression; fixed upgrade overwriting utp_enabled/tcp_enabled; reject invalid benc data; added HTTP clickjacking safeguards; UTF-8 peer client name sanitization
+    - [Web Client] Fixed timestamp display in dropdowns; fixed incorrect torrent status after reconnecting
+    - [Qt/GTK] Fixed 4.1.0 crashes and settings migration issues
+    - [macOS] Fixed 4.1.0 memory leak; improved UI CPU usage
+
+    Full release note: https://github.com/transmission/transmission/releases/tag/4.1.2
+
+  developer: Transmission
+  website: https://transmissionbt.com/
+  sourceCode: https://github.com/transmission/transmission
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  requiredMemory: 128Mi
+  limitedMemory: 256Mi
+  requiredDisk: 128Mi
+  limitedDisk: 256Mi
+  requiredCpu: 100m
+  limitedCpu: 0.5
+  doc: https://transmissionbt.com/download#embeddeddistros
+  license:
+  - text: GPLv3
+    url: https://github.com/transmission/transmission/blob/main/COPYING
+  supportArch:
+  - amd64
+  - arm64
+options:
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+entrances:
+- name: transmission-svc
+  port: 9091
+  host: transmission-svc
+  title: Transmission
+  icon: https://app.cdn.olares.com/appstore/transmission/icon.png
+  openMethod: window
+  authLevel: internal

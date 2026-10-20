@@ -1,0 +1,84 @@
+metadata:
+  title: Whisper-WebUI
+  description: 基于 whisper 模型的 Web 界面，可轻松生成字幕。
+spec:
+  fullDescription: |
+    **使用须知**
+    该应用为共享应用，在 Olares 内部仅会部署一个服务。
+
+    **前置条件**
+    安装前请配置 **HF_TOKEN** 和 **HF_ENDPOINT**。管理员 Token 须已在 Hugging Face 接受以下受限仓库条款：
+    - `pyannote/speaker-diarization-3.1`
+    - `pyannote/segmentation-3.0`
+
+    llm-init 预下载：`Systran/faster-whisper-large-v2`、`pyannote/speaker-diarization-3.1`、`pyannote/segmentation-3.0`。
+
+    **性能说明**
+    安装后首次转写可能较慢（模型载入 GPU），后续请求会更快。
+
+    **应用概览**
+    基于 Gradio 的 Whisper 浏览器界面。您可以将其用作简易字幕生成器！
+
+    **功能亮点**
+    选择您想要使用的 Whisper 实现：
+    - openai/whisper
+    - SYSTRAN/faster-whisper（默认使用）
+    - Vaibhavs10/insanely-fast-whisper
+
+    从各种来源生成字幕，包括：
+    - 文件
+    - YouTube
+    - 麦克风录音
+
+    目前支持的字幕格式：
+    - SRT
+    - WebVTT
+    - txt（仅限文本文件，无时间线）
+
+    语音转文本
+    - 从其他语言到英语（使用 Whisper 的端到端语音转文本翻译功能）
+
+    文本转文本翻译
+    - 使用 Facebook NLLB 模型翻译字幕文件
+    - 使用 DeepL API 翻译字幕文件
+
+    使用 Silero VAD 预处理音频输入。
+
+    使用 UVR 预处理音频输入以分离背景音乐。
+
+    使用 pyannote 模型进行说话人区分后处理
+
+    **音频文件自动删除与留存设置**
+
+    清理范围仅包括本版本为网页或 API 处理创建的请求文件夹：上传的音频/视频副本、从 URL 下载的文件，以及视频转换产生的音频。保留用户设备和指定输入文件夹中的原文件、字幕、主动保存的音源分离结果、模型、配置和已有 outputs 文件。网页上传和麦克风录音使用 Gradio 缓存副本，处理结束后在自动删除开启时清理这些副本；再次处理需重新上传。尚未提交处理的 Gradio 缓存属于临时文件，应用停止或重启后会消失，即使开启请求文件留存也一样。
+
+    - **AUTO_DELETE_SOURCE_AUDIO**：默认 true。请求处理结束或失败时删除本次请求文件。此行为不以转录成功为条件。设为 false 可保留请求文件；希望持续保留时，还需将 AUTO_CLEANUP_SOURCE_AUDIO 设为 false。更改配置无法恢复已删除的文件。
+    - **AUTO_CLEANUP_SOURCE_AUDIO**：默认 true。每小时检查一次，按 SOURCE_AUDIO_RETENTION_HOURS 清理过期请求文件夹，包括保留的上传副本、URL 下载文件、转换音频和异常退出遗留文件。跳过仍在处理的请求。设为 false 关闭定时清理，但不影响第一个开关的即时删除，也不禁止管理员手动清理。重新开启后，已超过留存时间的文件可能在下一次检查时被删除。
+    - **SOURCE_AUDIO_RETENTION_HOURS**：默认 24，支持 1–8760 的整数，单位为小时。仅在定时清理开启时生效。已结束的请求从结束时间计算；异常退出的请求从文件夹创建时间计算。到期后在下一次每小时检查时清理，不会延迟第一个开关的即时删除。
+    - **AUDIO_CLEANUP_TOKEN**：可选管理员令牌。留空时关闭存储查看和手动清理接口。配置后，调用 GET /storage/audio 或 POST /storage/audio/cleanup 时需发送 Authorization: Bearer <token>。手动清理默认仅预览（dry_run=true），明确设置 dry_run=false 才执行删除；即使自动清理关闭，管理员仍可手动清理。请妥善保管令牌，持有者可以删除符合条件的请求文件。
+
+    **常用配置**
+    - 处理后删除（默认）：两个开关均为 true。24 小时留存期用于回收异常遗留文件。
+    - 保留 7 天：AUTO_DELETE_SOURCE_AUDIO=false，AUTO_CLEANUP_SOURCE_AUDIO=true，SOURCE_AUDIO_RETENTION_HOURS=168。
+    - 持续保留：两个开关均为 false，留存小时数不生效。管理员仍可手动清理。
+
+  upgradeDescription: |
+    v1.1.23: 优化已有安装的升级兼容性。
+
+    v1.1.22: 升级 Whisper-WebUI 至 1.0.8，新增可配置的请求音频删除、留存和受保护的清理接口，并声明 NVIDIA GPU 资源要求。保留字幕、指定输入文件夹中的原文件、配置和已有输出。
+
+    v1.1.21: Model Console（llm-init）版本更新为 v1.7.21。
+
+    修复 HF 缓存软链路径（Chart 1.1.12）。
+
+    引擎启动用 `tr '/' '--'` 拼 Hugging Face hub 目录名，但 `tr` 是逐字符映射，
+    第二个 `-` 会被丢弃，实际查的是 `models--org-repo` 而非 `models--org--repo`。
+    三个 `link_repo` 全部 miss，日志出现三条 `[warn] missing HF cache dir`，
+    而 llm-init 其实已经下完模型。沿用已有 HF 缓存，不会重新下载权重。
+
+    变更详情：
+    - 将 `tr '/' '--'` 改为 `sed 's|/|--|g'`，使 `/Whisper-WebUI/models/...`
+      下的软链指向真实 HF hub 目录。
+
+    v1.1.11: 轻量 `/__entrance_ready` 探针（不再 GET Gradio 首页）。
+    v1.1.10: 反向代理切换为官方 OpenResty `1.29.2.5-bookworm-fat`。

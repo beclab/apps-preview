@@ -1,0 +1,20 @@
+metadata:
+  title: Coder
+  description: セルフホスト型クラウド開発環境
+spec:
+  upgradeDescription: |
+    Chart 1.0.23 は Coder を v2.31.9 から v2.36.6 に更新します。
+    イメージは docker.io/beclab/coder-coder:v2.36.6 です。
+    PostgreSQL 接続、アクセス URL、任意の Anthropic key はそのままです。Coder は起動時にデータベースのマイグレーションを実行します。public.schema_migrations が既にある場合、init コンテナが先に pg_dump を appData/backups/chart-1.0.23/coder.dump へ書き出します。以降の起動と、そのテーブルがないデータベースでは省略します。マイグレーション中に停止しないよう、liveness probe の待ち時間を延ばしています。
+    v2.36 は既存の login_type=none アカウントをパスワードログインへ変換し、oauth2_dcr_enabled を有効にしない限り新しい OAuth2 動的クライアント登録を拒否し、chat_model_configs.provider を削除します。
+    リリースノート: https://github.com/coder/coder/releases/tag/v2.36.6
+  fullDescription: |
+    Coder は、あらゆるクラウド、IDE、OS、Git プロバイダー、IDP で動作するセルフホスト型オープンソースのクラウド開発環境です。
+
+    Coder により、組織はパブリックまたはプライベートのクラウドインフラ上に開発環境を構築できます。クラウド開発環境は Terraform で定義され、安全な高速 Wireguard® トンネルで接続され、未使用時は自動停止してコストを削減します。Coder は、エンジニアリングチームが最も有益なワークロードにクラウドを柔軟に使えるようにします。
+
+    - Terraform でクラウド開発環境を定義
+      - EC2 VM、Kubernetes Pod、Docker コンテナなど
+    - アイドルリソースを自動停止してコスト削減
+    - 開発者のオンボーディングを数日ではなく数秒で
+

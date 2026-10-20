@@ -1,0 +1,205 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clawdbot-gateway-ipc
+  namespace: "{{ .Release.Namespace }}"
+data:
+  # PID 1 of the gateway container. Implements the same sentinel-file
+  # restart pattern as terminus-apps/hermesagent: the gateway runs as a
+  # CHILD of this wrapper, so a restart re-spawns the child in-place
+  # without exiting the container (avoids kubelet container-restart
+  # events, image revalidation, and CrashLoopBackOff exponential backoff).
+  #
+  # Operator workflow from any container that mounts app-data-config:
+  #     touch /home/node/.openclaw/.gateway-restart-requested
+  # Within OPENCLAW_GATEWAY_SENTINEL_POLL_SECONDS (default 2s) the
+  # watcher kills the child and the outer loop respawns it after a short
+  # SENTINEL_DELAY. The same sentinel also short-circuits the long
+  # post-crash backoff so an operator can immediately retry after fixing
+  # a bad config.
+  # OpenClaw 2026.8+ only reads OPENCLAW_*. Older images, user .env files,
+  # and leftover scripts still export CLAWDBOT_* / MOLTBOT_*. This maps
+  # those names into OPENCLAW_* when the new name is unset, and can also
+  # export CLAWDBOT_* from OPENCLAW_* so leftover scripts keep working.
+  openclaw-env-compat.sh: |
+    #!/usr/bin/env bash
+    openclaw_env_compat() {
+      local line name val dest
+      while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        name="${line%%=*}"
+        val="${line#*=}"
+        case "$name" in
+          CLAWDBOT_*) dest="OPENCLAW_${name#CLAWDBOT_}" ;;
+          MOLTBOT_*) dest="OPENCLAW_${name#MOLTBOT_}" ;;
+          *) continue ;;
+        esac
+        if [ -z "${!dest+x}" ]; then
+          export "$dest=$val"
+        fi
+      done <<EOF
+    $(env | grep -E '^(CLAWDBOT_|MOLTBOT_)' || true)
+    EOF
+      if [ "${OPENCLAW_ENV_COMPAT_KEEP_LEGACY:-1}" != "0" ]; then
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+          name="${line%%=*}"
+          val="${line#*=}"
+          case "$name" in
+            OPENCLAW_*) dest="CLAWDBOT_${name#OPENCLAW_}" ;;
+            *) continue ;;
+          esac
+          if [ -z "${!dest+x}" ]; then
+            export "$dest=$val"
+          fi
+        done <<EOF
+    $(env | grep -E '^OPENCLAW_' || true)
+    EOF
+      fi
+      if [ "${OPENCLAW_ENV_COMPAT_UNSET_LEGACY:-0}" = "1" ]; then
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+          unset "${line%%=*}"
+        done <<EOF
+    $(env | grep -E '^(CLAWDBOT_|MOLTBOT_)' || true)
+    EOF
+      fi
+    }
+    openclaw_env_compat
+
+  gateway-entrypoint.sh: |
+    #!/usr/bin/env bash
+    set -u
+
+    # 8.2+ only reads OPENCLAW_*. Map leftover CLAWDBOT_*/MOLTBOT_* then
+    # drop them so the process does not emit OPENCLAW_LEGACY_ENV_VARS.
+    export OPENCLAW_ENV_COMPAT_UNSET_LEGACY="${OPENCLAW_ENV_COMPAT_UNSET_LEGACY:-1}"
+    export OPENCLAW_ENV_COMPAT_KEEP_LEGACY="${OPENCLAW_ENV_COMPAT_KEEP_LEGACY:-0}"
+    if [ -f /usr/local/bin/openclaw-env-compat.sh ]; then
+      # shellcheck disable=SC1091
+      . /usr/local/bin/openclaw-env-compat.sh
+    fi
+
+    RETRY_DELAY="${OPENCLAW_GATEWAY_RESTART_DELAY_SECONDS:-30}"
+    SENTINEL="${OPENCLAW_GATEWAY_RESTART_SENTINEL:-/home/node/.openclaw/.gateway-restart-requested}"
+    POLL="${OPENCLAW_GATEWAY_SENTINEL_POLL_SECONDS:-2}"
+    SENTINEL_DELAY="${OPENCLAW_GATEWAY_SENTINEL_RESTART_DELAY_SECONDS:-3}"
+    FLAG="/tmp/.gateway-wrapper-sentinel-fired"
+
+    cleanup() {
+      echo "[gateway-wrapper] SIGTERM received, exiting"
+      [ -n "${watcher:-}" ] && kill -TERM "$watcher" 2>/dev/null || true
+      if [ -n "${child:-}" ]; then
+        kill -TERM "$child" 2>/dev/null || true
+        # Keep PID 1 alive while Gateway flushes SQLite and releases its lease.
+        wait "$child" 2>/dev/null || true
+      fi
+      rm -f /tmp/openclaw-gateway.pid
+      exit 0
+    }
+    trap cleanup TERM INT
+
+    mkdir -p "$(dirname "$SENTINEL")" 2>/dev/null || true
+    rm -f "$SENTINEL" "$FLAG" 2>/dev/null || true
+
+    cd /app
+    while :; do
+      echo "[gateway-wrapper] starting openclaw gateway"
+      # Keep the explicit bind/port for upgrades: existing persistent configs
+      # may still contain loopback and are intentionally not overwritten.
+      /usr/local/bin/node dist/index.js gateway --bind lan --port 18789 &
+      child=$!
+      printf '%s\n' "$child" > /tmp/openclaw-gateway.pid
+
+      # Background watcher: polls the sentinel; on touch, kills the child
+      # and records WHY (so the main loop picks the short delay).
+      (
+        while kill -0 "$child" 2>/dev/null; do
+          if [ -f "$SENTINEL" ]; then
+            echo "[gateway-wrapper] restart requested via $SENTINEL"
+            rm -f "$SENTINEL" 2>/dev/null
+            : > "$FLAG"
+            kill -TERM "$child" 2>/dev/null
+            break
+          fi
+          sleep "$POLL"
+        done
+      ) &
+      watcher=$!
+
+      wait "$child"
+      rc=$?
+      rm -f /tmp/openclaw-gateway.pid
+
+      kill "$watcher" 2>/dev/null || true
+      wait "$watcher" 2>/dev/null || true
+
+      if [ -f "$FLAG" ]; then
+        rm -f "$FLAG"
+        delay="$SENTINEL_DELAY"
+        reason="restart requested via sentinel"
+      else
+        delay="$RETRY_DELAY"
+        reason="natural exit (code=${rc})"
+      fi
+      echo "[gateway-wrapper] gateway ${reason}; sleeping ${delay}s before restart"
+
+      # Sleep, but allow the sentinel to short-circuit the backoff
+      # (so operators don't have to wait through 30s after fixing config).
+      end_ts=$(( $(date +%s) + delay ))
+      while [ "$(date +%s)" -lt "$end_ts" ]; do
+        if [ -f "$SENTINEL" ]; then
+          echo "[gateway-wrapper] sentinel observed during backoff, restarting immediately"
+          rm -f "$SENTINEL" 2>/dev/null
+          break
+        fi
+        sleep 1
+      done
+    done
+
+  # Convenience wrapper for users in the clawdbot shell. Equivalent to
+  # `touch /home/node/.openclaw/.gateway-restart-requested`, then polls
+  # /readyz to confirm the new process is serving.
+  restart-gateway: |
+    #!/usr/bin/env bash
+    set -u
+    SENTINEL="${OPENCLAW_GATEWAY_RESTART_SENTINEL:-/home/node/.openclaw/.gateway-restart-requested}"
+    READY_URL=http://127.0.0.1:18789/readyz
+    WAIT=1
+    [ "${1:-}" = "--no-wait" ] && WAIT=0
+    token="$(node -e 'try{const c=require("/home/node/.openclaw/openclaw.json"); process.stdout.write(String(c?.gateway?.auth?.token||""))}catch{}' 2>/dev/null || true)"
+    ready_curl() {
+      if [ -n "$token" ]; then
+        curl -fsS -o /dev/null --max-time "$1" -H "Authorization: Bearer ${token}" "${READY_URL}" 2>/dev/null
+      else
+        curl -fsS -o /dev/null --max-time "$1" "${READY_URL}" 2>/dev/null
+      fi
+    }
+
+    mkdir -p "$(dirname "$SENTINEL")" 2>/dev/null || true
+    : > "$SENTINEL"
+    echo "gateway: restart requested"
+
+    [ "${WAIT}" = "0" ] && exit 0
+
+    # Phase 1: wait for the old gateway to stop answering /readyz, so we
+    # don't mistake the pre-restart process for the post-restart one.
+    # v2026.8.2 rejects unauthenticated /readyz, so send the gateway token.
+    for _ in $(seq 1 30); do
+      if ! ready_curl 1; then
+        echo "gateway: old process gone, waiting for new one"
+        break
+      fi
+      sleep 1
+    done
+
+    # Phase 2: wait for the respawned gateway to be ready again.
+    for _ in $(seq 1 60); do
+      sleep 1
+      if ready_curl 2; then
+        echo "gateway: ready"
+        exit 0
+      fi
+    done
+    echo "gateway: did not become ready within 60s" >&2
+    exit 1

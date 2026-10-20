@@ -1,0 +1,112 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: nzbget
+spec:
+  replicas: {{ .Values.workloads.nzbget.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nzbget
+  template:
+    metadata:
+      labels:
+        app: nzbget
+    spec:
+      initContainers:
+      - name: init-nzbget
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        command:
+          - sh
+          - '-c'
+          - |
+            sh /chart-init/init.sh
+        resources: {}
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: home-downloads
+          mountPath: /olares/userdata/home
+        - mountPath: /config
+          name: nzbget-config
+        - name: nzbget-init
+          mountPath: /chart-init
+          readOnly: true
+        - name: nzbget-defaults
+          mountPath: /chart-defaults
+          readOnly: true
+        securityContext:
+          runAsUser: 0
+      containers:
+      - env:
+        - name: PGID
+          value: "1000"
+        - name: PUID
+          value: "1000"
+        - name: TZ
+          value: UTC
+        name: nzbget
+        image: "nzbgetcom/nzbget:v26.2"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        ports:
+        - containerPort: 6789
+        volumeMounts:
+        - mountPath: /config
+          name: nzbget-config
+        - mountPath: /olares/userdata/home
+          name: home-downloads
+        - mountPath: /olares/userdata/external
+          name: external-downloads
+        - mountPath: /downloads
+          name: home-downloads
+          subPath: Downloads
+      volumes:
+      - name: nzbget-config
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.appData }}
+      - name: home-downloads
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.userData }}
+      - name: external-downloads
+        hostPath:
+          type: DirectoryOrCreate
+          path: "{{ .Values.sharedlib }}"
+      - name: nzbget-init
+        configMap:
+          name: nzbget-init
+          defaultMode: 438
+          items:
+          - key: init.sh
+            path: init.sh
+      - name: nzbget-defaults
+        configMap:
+          name: nzbget-defaults
+          defaultMode: 420
+          items:
+          - key: nzbget.conf
+            path: nzbget.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+    - protocol: TCP
+      port: 6789
+      targetPort: 6789

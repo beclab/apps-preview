@@ -1,0 +1,215 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: directus
+  name: directus
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.directus.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: directus
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: directus
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      initContainers:
+        - name: init-permissions
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          command:
+            - sh
+            - -c
+            - |
+              for d in /directus/uploads /directus/extensions /directus/database /directus/templates; do
+                mkdir -p "$d" && chown 1000:1000 "$d"
+              done
+          securityContext:
+            runAsUser: 0
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          volumeMounts:
+            - mountPath: /directus/uploads
+              name: uploads
+            - mountPath: /directus/extensions
+              name: extensions
+            - mountPath: /directus/database
+              name: database
+            - mountPath: /directus/templates
+              name: templates
+        - name: wait-postgres
+          image: "docker.io/beclab/wait-for:0.1.0"
+          args: ["-it", "{{ .Values.postgres.host }}:5432"]
+          imagePullPolicy: IfNotPresent
+        - name: wait-redis
+          image: "docker.io/beclab/wait-for:0.1.0"
+          args: ["-it", "directus-redis:6379"]
+          imagePullPolicy: IfNotPresent
+      containers:
+        - env:
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: Etc/UTC
+            - name: DISPLAY
+              value: ':0'
+            - name: HOST
+              value: '0.0.0.0'
+            - name: PORT
+              value: '8055'
+            - name: PUBLIC_URL
+              value: 'https://directus.example.com'
+            - name: STORAGE_LOCATIONS
+              value: 'local'
+            - name: STORAGE_LOCAL_DRIVER
+              value: 'local'
+            - name: STORAGE_LOCAL_ROOT
+              value: '/directus/uploads'
+            - name: IP_TRUST_PROXY
+              value: 'true'
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: SECRET
+            - name: ADMIN_EMAIL
+              value: '{{ .Values.olaresEnv.ADMIN_EMAIL }}'
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: ADMIN_PASSWORD
+            - name: WEBSOCKETS_ENABLED
+              value: 'true'
+            - name: DB_CLIENT
+              value: 'pg'
+            - name: DB_HOST
+              value: '{{ .Values.postgres.host }}'
+            - name: DB_PORT
+              value: '{{ .Values.postgres.port }}'
+            - name: DB_USER
+              value: '{{ .Values.postgres.username }}'
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: DB_PASSWORD
+            - name: DB_DATABASE
+              value: '{{ .Values.postgres.databases.directus }}'
+            - name: CACHE_ENABLED
+              value: 'true'
+            - name: CACHE_AUTO_PURGE
+              value: 'true'
+            - name: CACHE_STORE
+              value: 'redis'
+            - name: REDIS
+              value: 'redis://directus-redis:6379/0'
+
+          image: "docker.io/directus/directus:12.3.1"
+          name: directus
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          ports:
+            - name: http
+              containerPort: 8055
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /directus/uploads
+              name: uploads
+            - mountPath: /directus/extensions
+              name: extensions
+            - mountPath: /directus/database
+              name: database
+            - mountPath: /directus/templates
+              name: templates
+      restartPolicy: Always
+      volumes:
+        - name: uploads
+          hostPath:
+            type: DirectoryOrCreate
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: '{{ .Values.userspace.appData }}/uploads'
+              {{- else }}
+            path: '{{ .Values.userspace.appData }}/directus/uploads'
+              {{- end }}
+            {{- else }}
+            path: '{{ .Values.userspace.appData }}/directus/uploads'
+            {{- end }}
+        - name: extensions
+          hostPath:
+            type: DirectoryOrCreate
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: '{{ .Values.userspace.appData }}/extensions'
+              {{- else }}
+            path: '{{ .Values.userspace.appData }}/directus/extensions'
+              {{- end }}
+            {{- else }}
+            path: '{{ .Values.userspace.appData }}/directus/extensions'
+            {{- end }}
+        - name: database
+          hostPath:
+            type: DirectoryOrCreate
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: '{{ .Values.userspace.appData }}/database'
+              {{- else }}
+            path: '{{ .Values.userspace.appData }}/directus/database'
+              {{- end }}
+            {{- else }}
+            path: '{{ .Values.userspace.appData }}/directus/database'
+            {{- end }}
+        - name: templates
+          hostPath:
+            type: DirectoryOrCreate
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: '{{ .Values.userspace.appData }}/templates'
+              {{- else }}
+            path: '{{ .Values.userspace.appData }}/directus/templates'
+              {{- end }}
+            {{- else }}
+            path: '{{ .Values.userspace.appData }}/directus/templates'
+            {{- end }}
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: directus
+  name: directus
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: "api"
+      port: 8055
+      targetPort: 8055
+  selector:
+    io.kompose.service: directus
+status:
+  loadBalancer: {}

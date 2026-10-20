@@ -1,0 +1,212 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  steamheadless: 1
+metadata:
+  name: steamheadless
+  description: A Headless Steam Service
+  icon: https://app.cdn.olares.com/appstore/steamheadless/icon.png
+  appid: steamheadless
+  version: '1.0.47'
+  title: Steam Headless
+  categories:
+  - Fun
+  - homelab
+  tags:
+  - gaming
+
+entrances:
+- name: steamheadless
+  host: steamheadless
+  port: 8083
+  title: Steam Headless
+  icon: https://app.cdn.olares.com/appstore/steamheadless/icon.png
+  authLevel: private
+  openMethod: window
+- name: sunshineweb
+  host: sunshineweb
+  port: 47990
+  title: Sunshine Web
+  icon: https://app.cdn.olares.com/appstore/steamheadless/sunshine.webp
+  authLevel: private
+  openMethod: window
+  invisible: true
+- name: steamheadlessaudio
+  host: steamheadlessaudio
+  port: 8088
+  title: Steam Audio
+  icon: https://app.cdn.olares.com/appstore/steamheadless/icon.png
+  authLevel: internal
+  openMethod: window
+  invisible: true
+overlayGateway:
+  enable: true
+  entrances:
+  - title: "Sunshine Web UI"
+    workload: steamheadless
+    port: 47990
+    protocol: tcp
+    description: "HTTPS interface for managing Sunshine settings, applications, and client pairing."
+  - title: "Moonlight HTTPS"
+    workload: steamheadless
+    port: 47984
+    protocol: tcp
+    description: "Secure Moonlight/GameStream endpoint for pairing, host discovery, and session negotiation."
+  - title: "Moonlight HTTP"
+    workload: steamheadless
+    port: 47989
+    protocol: tcp
+    description: "Moonlight/GameStream HTTP endpoint for host information and application discovery."
+  - title: Moonlight RTSP
+    workload: steamheadless
+    port: 48010
+    protocol: tcp
+    description: "TCP RTSP listener that establishes and negotiates a streaming session."
+  - title: "Video Stream"
+    workload: steamheadless
+    port: 47998
+    protocol: udp
+    description: "Carries the low-latency encoded video stream from Sunshine to Moonlight."
+  - title: "Control Stream"
+    workload: steamheadless
+    port: 47999
+    protocol: udp
+    description: "Carries real-time streaming control traffic between Moonlight and Sunshine."
+  - title: "Audio Stream"
+    workload: steamheadless
+    port: 48000
+    protocol: udp
+    description: "Carries the low-latency game and system audio stream from Sunshine to Moonlight."
+  - title: "Reserved Mic Audio"
+    workload: steamheadless
+    port: 48002
+    protocol: udp
+    description: "Reserved legacy GameStream port for client-to-host microphone audio, which current Sunshine normally does not use."
+ports:
+- name: tcp3
+  host: steamheadless
+  port: 47990
+  protocol: tcp
+  exposePort: 47990
+- name: tcp4
+  host: steamheadless
+  port: 47984
+  protocol: tcp
+  exposePort: 47984
+- name: tcp5
+  host: steamheadless
+  port: 47989
+  protocol: tcp
+  exposePort: 47989
+- name: tcp6
+  host: steamheadless
+  port: 48010
+  protocol: tcp
+  exposePort: 48010
+- name: udp1
+  host: steamheadless
+  port: 47998
+  protocol: udp
+  exposePort: 47998
+- name: udp2
+  host: steamheadless
+  port: 47999
+  protocol: udp
+  exposePort: 47999
+- name: udp3
+  host: steamheadless
+  port: 48000
+  protocol: udp
+  exposePort: 48000
+- name: udp4
+  host: steamheadless
+  port: 48002
+  protocol: udp
+  exposePort: 48002
+tailscale: 
+  acls:
+  - proto: tcp
+    dst:
+    - "*:47990,47984,47989,48010"
+  - proto: udp
+    dst:
+    - "*:47998,47999,48000,48002"    
+permission:
+  appCache: true
+spec:
+  versionName: '0.2.0'
+  featuredImage: https://app.cdn.olares.com/appstore/steamheadless/1.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/steamheadless/1.webp
+  - https://app.cdn.olares.com/appstore/steamheadless/2.webp
+  fullDescription: |
+    Steam Headless is a Remote Game Streaming Server.
+
+    Play your games either in the browser with audio or via Steam Link or Moonlight. Play from another Steam Client with Steam Remote Play.
+
+    Easily deploy a Steam Docker instance in seconds.
+
+    **Features**
+    Steam Client configured for running on Linux with Proton
+    Moonlight compatible server for easy remote desktop streaming
+    One click installation of EmeDeck, Heroic and Lutris
+    Full video/audio noVNC web access to a Xfce4 Desktop
+    NVIDIA, AMD and Intel GPU support
+    Full controller support
+    Support for Flatpak and Appimage installation
+    Root access
+    Based on Debian Bookworm
+  upgradeDescription: |
+    - Resolved issue preventing installation when the Sunshine user is set to a numeric value.
+
+  developer: Steam-Headless
+  sourceCode: https://github.com/Steam-Headless/docker-steam-headless
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  doc: https://github.com/Steam-Headless/docker-steam-headless#readme-ov-file
+  requiredMemory: 4Gi
+  limitedMemory: 64Gi
+  requiredDisk: 1Gi
+  limitedDisk: 10Gi
+  requiredCpu: 4
+  limitedCpu: 18
+  requiredGpu: 4Gi
+  limitedGpu: 16Gi
+  supportArch:
+  - amd64
+options:
+  apiTimeout: 0
+  conflicts:
+  - name: isaaclab
+    type: application
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+envs:
+  - envName: SUNSHINE_USER
+    required: true
+    type: string
+    editable: false
+    regex: '^[\w]{1,}$'
+  - envName: SUNSHINE_PASS
+    required: true
+    type: password
+    editable: false
+    regex: '^[\w\-!@#$%^&*()+={}\[\]:,.?~]{1,}$'
+  - envName: RUNNING_MODE
+    required: false
+    type: string
+    editable: false
+    applyOnChange: true
+    default: "primary"
+    description: "Running mode for the Steam Headless service. Options are 'primary' or 'secondary'."

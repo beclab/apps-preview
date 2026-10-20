@@ -1,0 +1,228 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: llamafactory
+  name: llamafactory
+  namespace: '{{ .Release.Namespace }}'
+  annotations:
+    applications.app.bytetrade.io/gpu-inject: "true"  
+spec:
+  replicas: {{ .Values.workloads.llamafactory.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: llamafactory
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: llamafactory
+    spec:
+      initContainers:
+        - name: migrate-root-appcache-to-appdata
+          image: "docker.io/beclab/busybox:1.37"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              SOURCE=/old-data
+              DEST=/new-data
+              MARKER="${DEST}/.migration_from_appcache_done_root"
+
+              if [ -f "$MARKER" ]; then
+                echo "[migrate-root] marker present, skip."
+                exit 0
+              fi
+
+              if [ -n "$(ls -A "$DEST" 2>/dev/null | grep -v '^\.migration_from_appcache_done_root$' || true)" ]; then
+                echo "[migrate-root] appData already has data, skip."
+                echo "skipped existing dest at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                exit 0
+              fi
+
+              if [ -n "$(ls -A "$SOURCE" 2>/dev/null || true)" ]; then
+                echo "[migrate-root] copying appCache -> appData..."
+                cp -a "$SOURCE"/. "$DEST"/
+                echo "migrated from appCache at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                echo "[migrate-root] done; legacy appCache left intact for rollback."
+              else
+                echo "[migrate-root] no legacy data, fresh install."
+                echo "fresh install at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              fi
+          volumeMounts:
+            - name: data-legacy
+              mountPath: /old-data
+              readOnly: true
+            - name: data
+              mountPath: /new-data
+        - name: migrate-app-appcache-to-appdata
+          image: "docker.io/beclab/busybox:1.37"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              SOURCE=/old-data
+              DEST=/new-data
+              MARKER="${DEST}/.migration_from_appcache_done_app"
+
+              if [ -f "$MARKER" ]; then
+                echo "[migrate-app] marker present, skip."
+                exit 0
+              fi
+
+              if [ -n "$(ls -A "$DEST" 2>/dev/null | grep -v '^\.migration_from_appcache_done_app$' || true)" ]; then
+                echo "[migrate-app] appData already has data, skip."
+                echo "skipped existing dest at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                exit 0
+              fi
+
+              if [ -n "$(ls -A "$SOURCE" 2>/dev/null || true)" ]; then
+                echo "[migrate-app] copying appCache -> appData..."
+                cp -a "$SOURCE"/. "$DEST"/
+                echo "migrated from appCache at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                echo "[migrate-app] done; legacy appCache left intact for rollback."
+              else
+                echo "[migrate-app] no legacy data, fresh install."
+                echo "fresh install at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              fi
+          volumeMounts:
+            - name: appdata-legacy
+              mountPath: /old-data
+              readOnly: true
+            - name: appdata
+              mountPath: /new-data
+        - name: migrate-output-appcache-to-appdata
+          image: "docker.io/beclab/busybox:1.37"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              SOURCE=/old-data
+              DEST=/new-data
+              MARKER="${DEST}/.migration_from_appcache_done_output"
+
+              if [ -f "$MARKER" ]; then
+                echo "[migrate-output] marker present, skip."
+                exit 0
+              fi
+
+              if [ -n "$(ls -A "$DEST" 2>/dev/null | grep -v '^\.migration_from_appcache_done_output$' || true)" ]; then
+                echo "[migrate-output] appData already has data, skip."
+                echo "skipped existing dest at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                exit 0
+              fi
+
+              if [ -n "$(ls -A "$SOURCE" 2>/dev/null || true)" ]; then
+                echo "[migrate-output] copying appCache -> appData..."
+                cp -a "$SOURCE"/. "$DEST"/
+                echo "migrated from appCache at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                echo "[migrate-output] done; legacy appCache left intact for rollback."
+              else
+                echo "[migrate-output] no legacy data, fresh install."
+                echo "fresh install at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              fi
+          volumeMounts:
+            - name: output-legacy
+              mountPath: /old-data
+              readOnly: true
+            - name: output
+              mountPath: /new-data
+      containers:
+      - name: llamafactory
+        image: "docker.io/beclab/kldtks-llama-factory:main-250218-b1"
+        ports:
+          - containerPort: 7860
+            protocol: TCP
+          - containerPort: 8000
+            protocol: TCP
+        command:
+          - bash
+          - '-c'
+          - unset LD_PRELOAD;llamafactory-cli webui
+        env:
+          - name: HF_ENDPOINT
+            value: 'https://hf-mirror.com'
+        resources:
+          limits:
+            cpu: "5"
+            memory: 20Gi
+          requests:
+            cpu: "1"
+            memory: 2Gi
+        volumeMounts:
+        - mountPath: /root
+          name: data
+        - mountPath: /app/data
+          name: appdata
+        - mountPath: /app/output
+          name: output
+        - mountPath: /home/Documents
+          name: userdata
+        - name: shm
+          mountPath: /dev/shm
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      volumes:
+      - hostPath:
+          path: '{{ .Values.userspace.appCache }}'
+          type: DirectoryOrCreate
+        name: data-legacy
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}'
+          type: DirectoryOrCreate
+        name: data
+      - hostPath:
+          path: '{{ .Values.userspace.appCache }}/app'
+          type: DirectoryOrCreate
+        name: appdata-legacy
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}/app'
+          type: DirectoryOrCreate
+        name: appdata
+      - hostPath:
+          path: '{{ .Values.userspace.appCache }}/output'
+          type: DirectoryOrCreate
+        name: output-legacy
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}/output'
+          type: DirectoryOrCreate
+        name: output
+      - name: userdata
+        hostPath:
+          type: Directory
+          path: {{ .Values.userspace.userData }}/Documents
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: "2Gi"
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: llamafactory
+  name: llamafactory
+  namespace: '{{ .Release.Namespace }}'
+spec:
+  ports:
+  - name: "8000"
+    port: 8000
+    targetPort: 8000
+  - name: "7860"
+    port: 7860
+    targetPort: 7860
+  selector:
+    io.kompose.service: llamafactory
+status:
+  loadBalancer: {}

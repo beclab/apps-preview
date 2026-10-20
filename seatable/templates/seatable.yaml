@@ -1,0 +1,126 @@
+{{- $seatableDomainENV := split "," .Values.domain.seatable -}}
+{{- $seatableDomain := index $seatableDomainENV "_0" -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seatable
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: seatable
+spec:
+  replicas: {{ .Values.workloads.seatable.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: seatable
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: seatable
+    spec:
+      initContainers:
+        - name: init-db-check
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          command:
+            - sh
+            - -c
+            - until nc -z seatable-mysql 3306; do echo Waiting for MariaDB...; sleep 2; done;
+        - name: init-redis-check
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          command:
+            - sh
+            - -c
+            - until nc -z redis 6379; do echo "Waiting for Redis..."; sleep 2; done;
+        - name: copy-license-if-absent
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /shared/seatable
+              if [ ! -f /shared/seatable/seatable-license.txt ]; then
+                cp /config-default/seatable-license.txt /shared/seatable/seatable-license.txt
+              fi
+          volumeMounts:
+            - name: seatable-data
+              mountPath: /shared
+            - name: seatable-license-cm
+              mountPath: /config-default
+              readOnly: true
+      containers:
+        - name: seatable
+          image: "docker.io/seatable/seatable-enterprise:6.2.13"
+          ports:
+            - containerPort: 80
+          env:
+            - name: TZ
+              value: Etc/UTC
+          envFrom:
+            - configMapRef:
+                name: seatable-config
+            - secretRef:
+                name: seatable-secrets
+          # Probe nginx (:80), not dtable-web (:8000). First boot runs DB SQL
+          # upgrades for minutes; a liveness on :8000 restarts the container mid-init.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 40
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 600
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: "1"
+              memory: 3Gi
+            limits:
+              cpu: "4"
+              memory: 10Gi
+          volumeMounts:
+            - name: seatable-data
+              mountPath: /shared
+            - name: seatable-nginx
+              mountPath: /etc/nginx/sites-enabled/default
+              subPath: default
+              readOnly: true
+      volumes:
+        - name: seatable-data
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}/opt/seatable/seatable-data'
+        - name: seatable-license-cm
+          configMap:
+            name: seatable-license
+            items:
+              - key: seatable-license.txt
+                path: seatable-license.txt
+        - name: seatable-nginx
+          configMap:
+            name: seatable-nginx-config
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seatable
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: seatable
+spec:
+  ports:
+    - name: "http"
+      port: 80
+      targetPort: 80
+  selector:
+    io.kompose.service: seatable

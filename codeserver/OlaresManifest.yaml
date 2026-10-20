@@ -1,0 +1,114 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  chartmuseum: 1
+  codeserver: 1
+metadata:
+  name: codeserver
+  description: VS Code in the browser
+  icon: https://app.cdn.olares.com/appstore/codeserver/icon.png
+  appid: codeserver
+  version: '1.0.20'
+  title: Code Server
+  categories:
+  - Developer Tools
+  - workspace
+  - developer
+  tags:
+  - coding
+  
+permission:
+  appCache: true
+  appData: true
+  userData:
+  - Home
+spec:
+  versionName: '4.138.0'
+  featuredImage: https://app.cdn.olares.com/appstore/codeserver/promote_image_1v2.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/codeserver/promote_image_1v2.webp
+  - https://app.cdn.olares.com/appstore/codeserver/promote_image_2v2.webp
+  - https://app.cdn.olares.com/appstore/codeserver/promote_image_3v2.webp
+  - https://app.cdn.olares.com/appstore/codeserver/promote_image_4v2.webp
+  fullDescription: |
+    Run VS Code on any machine anywhere and access it in the browser.
+
+    **Highlights**
+    - Code on any device with a consistent development environment.
+    - Use cloud servers to speed up tests, compilations, downloads, and more.
+    - Preserve battery life when you''''re on the go; all intensive tasks run on your server.
+    - VS Code features are supported but not all extensions
+
+    code-server is an open-source project that transforms Visual Studio Code (VS Code) into a server, enabling it to run on any machine. As a result, developers can access VS Code from any device with an internet connection, opening up new possibilities for remote development.
+
+    code-server stands out for its compatibility with most VS Code extensions. This feature allows developers to tailor their coding environment to their specific needs, even when working remotely
+
+    One of code-server's significant advantages is maintaining a consistent development environment across diverse devices, reducing issues with code behaving differently on various machines.
+
+  upgradeDescription: |
+    Upstream release: [code-server 4.138.0](https://github.com/coder/code-server/releases/tag/v4.138.0)
+
+    **What's changed**
+
+    - The editor is now VS Code 1.138.0.
+    - Add optional NVIDIA GPU access for development workloads while retaining CPU mode. Preserve existing configuration and initialize directory ownership without recursively changing workspace files.
+
+  developer: Coder Technologies, Inc.
+  website: https://coder.com/
+  sourceCode: https://github.com/coder/code-server
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  doc: https://coder.com/docs/code-server/latest
+  legal:
+  - text: Terms of Service
+    url: https://coder.com/legal/terms-of-service
+  - text: Code of conduct
+    url: https://coder.com/docs/v2/latest/contributing/CODE_OF_CONDUCT
+  - text: Privacy Policy
+    url: https://coder.com/legal/privacy-policy
+  license:
+  - text: AGPL-3.0
+    url: https://github.com/coder/coder/blob/main/LICENSE
+  accelerator:
+  - mode: cpu
+    requiredMemory: 512Mi
+    limitedMemory: 4.6Gi
+    requiredDisk: 128Mi
+    limitedDisk: 256Mi
+    requiredCpu: 200m
+    limitedCpu: "2"
+  - mode: nvidia
+    supportMultiCard: false
+    supportMultiNodes: false
+    requiredMemory: 512Mi
+    limitedMemory: 4.6Gi
+    requiredDisk: 128Mi
+    limitedDisk: 256Mi
+    requiredCpu: 200m
+    limitedCpu: "2"
+    requiredGPUMemory: 1Gi
+    limitedGPUMemory: 24Gi
+  supportArch:
+  - amd64
+  - arm64
+  runAsUser: true
+options:
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+entrances:
+- name: codeserver-svc
+  port: 8080
+  host: codeserver-svc
+  title: Code Server
+  icon: https://app.cdn.olares.com/appstore/codeserver/icon.png

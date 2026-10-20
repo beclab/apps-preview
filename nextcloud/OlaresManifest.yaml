@@ -1,0 +1,153 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  nextcloudweb: 1
+  nextcloud: 1
+  nextcloudoffice: 1
+metadata:
+  name: nextcloud
+  description: The productivity platform that keeps you in control
+  icon: https://app.cdn.olares.com/appstore/nextcloud/icon2.png
+  appid: nextcloud
+  version: '1.0.32'
+  title: Nextcloud
+  categories:
+  - Productivity_v112
+  - workspace
+  - homelab
+  tags:
+  - file-management
+
+permission:
+  appData: true
+  appCache: true
+  userData:
+  - Home
+  externalData: true
+spec:
+  versionName: '33.0.9'
+  featuredImage: https://app.cdn.olares.com/appstore/nextcloud/1.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/nextcloud/1.webp
+  - https://app.cdn.olares.com/appstore/nextcloud/2.webp
+  - https://app.cdn.olares.com/appstore/nextcloud/3.webp
+  - https://app.cdn.olares.com/appstore/nextcloud/4.webp
+  fullDescription: |
+    Nextcloud puts your data at your fingertips, under your control.
+    Store your documents, calendar, contacts and photos on a server at home, at one of our providers or in a data center you trust.
+
+    **Why is this so awesome?**
+    - Access your Data You can store your files, contacts, calendars, conversations and more on a server of your choosing.
+    - Sync your Data You keep your files, contacts, calendars, and more synchronized amongst your devices.
+    - Share your Data …by giving others access to the stuff you want them to see or to collaborate with.
+    - Expandable with hundreds of Apps ...like Calendar, Contacts, Mail, Video Chat and all those you can discover in our App Store
+    - Security with our encryption mechanisms, HackerOne bounty program and two-factor authentication.
+
+  upgradeDescription: |
+    Nextcloud 33.0.9 with Euro-Office connector 11.0.6 and an integrated document server. Includes amd64 and arm64 images.
+
+    This is a major version update. Existing Nextcloud 31 installations are automatically upgraded through 31.0.14 and 32.0.14. The upgrade backs up the database and configuration without copying user files, preserves existing external mounts, and skips external storage during migration indexing.
+
+    Upgrading may take longer than usual, depending on your data volume, device performance, and network conditions. Migration logs show the current stage, elapsed time, and approximate remaining time when available.
+
+    Although dozens of simulated upgrades completed without an upgrade failure, failures are still possible in other environments. If your upgrade fails, please report it promptly through the Ticket system and include the upgrade logs and your Olares version.
+
+  developer: Nextcloud GmbH
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  requiredMemory: 3Gi
+  limitedMemory: 6.5Gi
+  requiredDisk: 6Gi
+  limitedDisk: 20Gi
+  requiredCpu: 1.25
+  limitedCpu: 4
+  doc: https://nextcloud.com/support/
+  website: https://nextcloud.com/
+  sourceCode: https://github.com/nextcloud/server
+  legal:
+  - text: Legal Note
+    url: https://nextcloud.com/impressum/
+  - text: Code of Conduct
+    url: https://nextcloud.com/contribute/code-of-conduct/
+  - text: Privacy
+    url: https://nextcloud.com/privacy/
+  license:
+  - text: AGPL-3.0
+    url: https://github.com/nextcloud/server/blob/master/COPYING
+  supportClient:
+    android: https://play.google.com/store/apps/details?id=com.nextcloud.client
+    ios: https://apps.apple.com/us/app/nextcloud/id1125420102
+  supportArch:
+  - amd64
+  - arm64
+
+  runAsUser: true
+middleware:
+  postgres:
+    username: nextcloud
+    password: nextcloud
+    databases:
+    - name: nextcloud
+      distributed: true
+    - name: eurooffice
+  rabbitmq:
+    username: eurooffice
+    vhosts:
+    - name: eurooffice
+  redis:
+    namespace: nextcloud
+options:
+  apiTimeout: 0
+  allowedOutboundPorts:
+  - 465
+  - 587
+  dependencies:
+  - name: olares
+    version: '>=1.12.6-0'
+    type: system
+  - name: rabbitmq
+    version: '>=4.0.0-0'
+    type: middleware
+    mandatory: true
+  policies:
+  - uriRegex: ^/(/login)(/.*)?(\?.*)?$
+    level: one_factor
+    oneTime: false
+    validDuration: 3600s
+    entranceName: nextcloud
+  - uriRegex: ^/
+    level: public
+    oneTime: false
+    validDuration: 3600s
+    entranceName: nextcloud
+entrances:
+- name: nextcloud
+  port: 8080
+  host: nextcloud-web
+  title: Nextcloud
+  icon: https://app.cdn.olares.com/appstore/nextcloud/icon2.png
+  openMethod: window
+  authLevel: internal
+
+envs:
+- envName: NEXTCLOUD_ADMIN_USER
+  type: string
+  required: true
+  editable: false
+  description: "Username must be at least 3 characters long, contain only letters and numbers, and include at least one letter."
+  regex: '^(?=.*[a-zA-Z])[A-Za-z0-9]{3,}$'
+- envName: NEXTCLOUD_ADMIN_PASSWORD
+  type: password
+  required: true
+  editable: false
+  description: "Password must be at least 8 characters long, with at least one uppercase letter, one lowercase letter, one number and one special character"
+  regex: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\-!@#$%^&*()_+={}\[\]:,.?~])[A-Za-z\d\-!@#$%^&*()_+={}\[\]:,.?~]{8,}$'

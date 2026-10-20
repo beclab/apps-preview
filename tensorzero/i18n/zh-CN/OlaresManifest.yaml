@@ -1,0 +1,18 @@
+metadata:
+  title: TensorZero
+  description: 开源 LLMOps 平台
+spec:
+  upgradeDescription: |
+    TensorZero 2026.6.0 修复了网关中的一个高风险漏洞。
+
+    [发布说明](https://github.com/tensorzero/tensorzero/releases/tag/2026.6.0)
+  fullDescription: |
+    TensorZero 是一个开源 LLMOps 平台，整合了以下能力：
+
+    - **网关：**通过统一的 API 访问所有 LLM 提供商，专为高性能设计（p99 延迟 <1ms）
+    - **可观测性：**将推理记录和反馈存储在自己的数据库中，可通过程序或界面访问
+    - **评估：**使用启发式方法、LLM 评判器等，对单次推理或端到端工作流进行基准测试
+    - **优化：**收集指标和人工反馈，以优化提示词、模型和推理策略
+    - **实验：**借助内置的 A/B 测试、路由、回退、重试等功能，安心发布应用
+
+    [使用文档](https://www.tensorzero.com/docs)

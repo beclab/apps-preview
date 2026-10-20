@@ -1,0 +1,15 @@
+image:
+  version: '0.3.0'
+
+userspace:
+  appdata: ""
+
+postgres:
+  host: local
+  port: 5432
+  password: default
+workloads:
+  owncast:
+    replicaCount: 1
+  owncastproxy:
+    replicaCount: 1

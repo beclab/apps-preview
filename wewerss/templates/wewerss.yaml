@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: wewerss
+  name: wewerss
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.wewerss.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: wewerss
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: wewerss
+    spec:
+      containers:
+        - image: cooderl/wewe-rss:v2.6.1
+          name: wewerss
+          ports:
+            - containerPort: 4000
+          env:
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: Etc/UTC
+            - name: DISPLAY
+              value: ':0'
+            - name: DB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: DB_ROOT_PASSWORD
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: DATABASE_URL
+            - name: AUTH_CODE
+              value: '{{ .Values.olaresEnv.AUTH_CODE }}'
+            - name: FEED_MODE
+              value: 'fulltext'
+            - name: CRON_EXPRESSION
+              value: '35 5,17 * * *'
+            - name: MAX_REQUEST_PER_MINUTE
+              value: '60'
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 250m
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+
+      volumes:
+        - name: data
+          hostPath:
+            type: DirectoryOrCreate
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: '{{ .Values.userspace.appData }}/data'
+              {{- else }}
+            path: '{{ .Values.userspace.appData }}/wewerss/data'
+              {{- end }}
+            {{- else }}
+            path: '{{ .Values.userspace.appData }}/wewerss/data'
+            {{- end }}
+      restartPolicy: Always
+
+
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wewerss
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: wewerss
+spec:
+  ports:
+    - name: http
+      port: 4000
+      targetPort: 4000
+  selector:
+    io.kompose.service: wewerss
+

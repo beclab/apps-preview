@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memos
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: memos
+spec:
+  replicas: {{ .Values.workloads.memos.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: memos
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: memos
+    spec:
+      initContainers:
+        - name: migrate-appcache-to-appdata
+          image: "docker.io/beclab/busybox:1.37"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              SOURCE=/old-data
+              DEST=/new-data
+              MARKER="${DEST}/.migration_from_appcache_done"
+
+              if [ -f "$MARKER" ]; then
+                echo "[migrate] marker present, skip."
+                exit 0
+              fi
+
+              if [ -n "$(ls -A "$DEST" 2>/dev/null | grep -v '^\.migration_from_appcache_done$' || true)" ]; then
+                echo "[migrate] appData already has data, skip."
+                echo "skipped existing dest at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                exit 0
+              fi
+
+              if [ -n "$(ls -A "$SOURCE" 2>/dev/null || true)" ]; then
+                echo "[migrate] copying appCache -> appData..."
+                cp -a "$SOURCE"/. "$DEST"/
+                echo "migrated from appCache at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                echo "[migrate] done; legacy appCache left intact for rollback."
+              else
+                echo "[migrate] no legacy data, fresh install."
+                echo "fresh install at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              fi
+          volumeMounts:
+            - name: memos-data-legacy
+              mountPath: /old-data
+              readOnly: true
+            - name: memos-data
+              mountPath: /new-data
+      containers:
+        - name: memos
+          image: "docker.io/neosmemo/memos:0.31.0"
+          env:
+            - name: TZ
+              value: Etc/UTC
+            - name: MEMOS_PORT
+              value: "5230"
+            - name: MEMOS_DRIVER
+              value: "postgres"
+            - name: MEMOS_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: MEMOS_DSN
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          ports:
+            - name: http
+              containerPort: 5230
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /var/opt/memos
+              name: memos-data
+              subPath: memos
+      restartPolicy: Always
+      volumes:
+        - name: memos-data
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}'
+        - name: memos-data-legacy
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appCache }}'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memos
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: memos
+spec:
+  ports:
+    - name: "5230"
+      port: 5230
+      targetPort: 5230
+  selector:
+    io.kompose.service: memos
+status:
+  loadBalancer: {}

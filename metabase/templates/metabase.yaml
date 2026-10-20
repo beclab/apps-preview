@@ -1,0 +1,91 @@
+﻿---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: metabase
+spec:
+  replicas: {{ .Values.workloads.metabase.replicaCount }}
+  selector:
+    matchLabels:
+      app: metabase
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: metabase
+    spec:
+      containers:
+        - name: metabase
+          image: "docker.io/metabase/metabase:v0.63.16.6"
+          env:
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: Etc/UTC
+            - name: DISPLAY
+              value: ":0"
+          envFrom:
+            - configMapRef:
+                name: metabase-config
+          resources:
+            requests:
+              cpu: 300m
+              memory: 500Mi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          volumeMounts:
+            - mountPath: /dev/random
+              name: metabase-data
+      volumes:
+        - name: metabase-data
+          hostPath:
+            type: DirectoryOrCreate
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: "{{ .Values.userspace.appData }}"
+              {{- else }}
+            path: "{{ .Values.userspace.appData }}/metabase"
+              {{- end }}
+            {{- else }}
+            path: "{{ .Values.userspace.appData }}/metabase"
+            {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metabase
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: metabase
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: metabase

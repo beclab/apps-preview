@@ -1,0 +1,119 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: owncast
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: owncast
+spec:
+  replicas: {{ .Values.workloads.owncast.replicaCount }}
+  selector:
+    matchLabels:
+      app: owncast
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: owncast
+    spec:
+      enableServiceLinks: false
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      initContainers:
+        - name: init-permissions
+          image: docker.io/beclab/aboveos-busybox:1.37.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /app/data
+              chown 1000:1000 /app/data
+              rm -rf /app/data/tmp /app/data/logs /app/data/hls /app/data/metrics
+              mkdir -p /app/data/tmp /app/data/logs /app/data/hls /app/data/metrics
+              find /app/data ! -user 1000 -exec chown 1000:1000 {} +
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      containers:
+        - name: owncast
+          image: owncast/owncast:0.3.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: rtmp
+              containerPort: 1935
+          env:
+            - name: TZ
+              value: Etc/UTC
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 500Mi
+            limits:
+              cpu: "3"
+              memory: 3Gi
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 5
+            periodSeconds: 20
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+      volumes:
+        - name: data
+          hostPath:
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: "{{ .Values.userspace.appData }}/data"
+              {{- else }}
+            path: "{{ .Values.userspace.appData }}/owncast/data"
+              {{- end }}
+            {{- else }}
+            path: "{{ .Values.userspace.appData }}/owncast/data"
+            {{- end }}
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: owncast-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: owncast
+  ports:
+    - name: admin
+      port: 8080
+      targetPort: 8080
+    - name: steam
+      port: 1935
+      targetPort: 1935
+  type: ClusterIP

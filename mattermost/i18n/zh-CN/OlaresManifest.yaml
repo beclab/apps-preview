@@ -1,0 +1,42 @@
+metadata:
+  description: 全生命周期的开发合作开源平台，确保您的通讯安全。
+  title: Mattermost
+spec:
+  fullDescription: |
+    Mattermost 是一个全生命周期的开发合作开源平台，确保您的通讯安全。该平台让您在完全控制数据的同时，实现安全的企业合作。
+
+    **为什么选择 Mattermost？**
+    随时随地提升团队效率
+    - 一个合作的核心平台。专为数字运营设计。
+
+    连接开发和运维团队
+    - Mattermost 使技术与操作团队能够在保证安全的前提下进行合作。
+
+    频道
+    - 将团队的所有沟通集中在一个平台。超越常规协作，支持自动化、斜杠命令、机器人集成和代码片段等功能。
+
+    行动手册
+    - 协调工具与团队，助力需要结构化协作的工作流程。Playbooks 是面向特定数字化运营场景和用例的标准化工作流程。
+
+    通话
+    - 通过 Channels 原生的语音通话功能，安全实时地连接团队。从发起事件响应室到结对编程、团队例会，Calls 让您一键开启对话。
+
+    连接
+    - 通过集成团队日常所需的工具，自定义和扩展平台。可深度集成主流 SaaS 工具，查找社区构建的集成，也可用插件框架及开放 API 自行开发。
+
+    控制
+    - 可选择安全云端或本地部署，确保数据始终在您掌控之中。定制安全、合规和访问控制，保障数据安全地仅存于您指定的位置。
+
+  upgradeDescription: |
+    将 Mattermost 从 9.9.1 升级至官方 Team Edition 11.8.2。
+
+    **应用升级**
+    - 改用官方镜像 `mattermost/mattermost-team-edition:11.8.2`
+    - 通过 `MM_*` 环境变量配置 PostgreSQL 和站点 URL
+    - 内存上限提升至 4 GiB（Mattermost 11 需要 PostgreSQL 14+）
+
+    **Chart 修复**
+    - 以 uid 1000 运行；init 容器修复 volume 权限
+    - 关闭文件日志；挂载服务器插件目录，修复权限错误
+
+    发行说明：https://github.com/mattermost/mattermost/releases/tag/v11.8.2

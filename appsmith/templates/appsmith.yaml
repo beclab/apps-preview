@@ -1,0 +1,92 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: appsmith
+  name: appsmith
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.appsmith.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: appsmith
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: appsmith
+    spec:
+      containers:
+        - env:
+            - name: TZ
+              value: Etc/UTC
+            - name: APPSMITH_ENCRYPTION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: APPSMITH_ENCRYPTION_PASSWORD
+            - name: APPSMITH_ENCRYPTION_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: APPSMITH_ENCRYPTION_SALT
+            - name: APPSMITH_REDIS_URL
+              value: 'redis://appsmith-redis:6379'
+          image: "docker.io/appsmith/appsmith-ee:v2.2.1"
+          name: appsmith
+          resources:
+            requests:
+              cpu: '1500m'
+              memory: 3Gi
+            limits:
+              cpu: '3'
+              memory: 6Gi
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+            - name: metrics
+              containerPort: 4318
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /appsmith-stacks
+              name: stacks
+      restartPolicy: Always
+      volumes:
+        - name: stacks
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}/stacks'
+
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: appsmith
+  name: appsmith
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: "80"
+      port: 80
+      targetPort: 80
+    - name: "443"
+      port: 443
+      targetPort: 443
+    - name: "4318"
+      port: 4318
+      targetPort: 4318
+  selector:
+    io.kompose.service: appsmith
+status:
+  loadBalancer: {}

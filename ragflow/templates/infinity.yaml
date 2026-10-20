@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infinity
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.infinity.replicaCount }}
+  selector:
+    matchLabels:
+      app: infinity
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: infinity
+    spec:
+      initContainers:
+      - name: migrate-appcache-to-appdata
+        image: "docker.io/beclab/busybox:1.37"
+        imagePullPolicy: IfNotPresent
+        command: ["sh", "-c"]
+        args:
+          - |
+            set -e
+            SOURCE=/old-data
+            DEST=/new-data
+            MARKER="${DEST}/.migration_from_appcache_infinity_done"
+
+            if [ -f "$MARKER" ]; then
+              echo "[migrate] marker present, skip."
+              exit 0
+            fi
+
+            if [ -n "$(ls -A "$DEST" 2>/dev/null | grep -v '^\.migration_from_appcache_infinity_done$' || true)" ]; then
+              echo "[migrate] appData already has data, skip."
+              echo "skipped existing dest at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              exit 0
+            fi
+
+            if [ -n "$(ls -A "$SOURCE" 2>/dev/null || true)" ]; then
+              echo "[migrate] copying appCache/infinity -> appData/infinity..."
+              cp -a "$SOURCE"/. "$DEST"/
+              echo "migrated from appCache at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              echo "[migrate] done; legacy appCache left intact for rollback."
+            else
+              echo "[migrate] no legacy data, fresh install."
+              echo "fresh install at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+            fi
+        volumeMounts:
+          - name: infinity-data-legacy
+            mountPath: /old-data
+            readOnly: true
+          - name: infinity-data
+            mountPath: /new-data
+      - name: init-chmod-data
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        command:
+          - sh
+          - '-c'
+          - |
+            chown -R 1000:1000 /var/infinity
+        resources: {}
+        volumeMounts:
+          - name: infinity-data
+            mountPath: /var/infinity
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+      containers:
+      - name: infinity
+        image: "docker.io/infiniflow/infinity:v0.7.0"
+        args: ["-f", "/infinity_conf.toml"]
+        ports:
+        - containerPort: 23820
+        - containerPort: 23817
+        - containerPort: 5432
+        env:
+        - name: TZ
+          value: "Asia/Shanghai"
+        volumeMounts:
+        - name: infinity-data
+          mountPath: /var/infinity
+        - name: infinity-config
+          mountPath: /infinity_conf.toml
+          subPath: infinity_conf.toml
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2000Mi
+          requests:
+            cpu: 50m
+            memory: 512Mi
+      volumes:
+      - hostPath:
+          path: '{{ .Values.userspace.appData }}/infinity'
+          type: DirectoryOrCreate
+        name: infinity-data
+      - hostPath:
+          path: '{{ .Values.userspace.appCache }}/infinity'
+          type: DirectoryOrCreate
+        name: infinity-data-legacy
+      - name: infinity-config
+        configMap:
+          name: infinity-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: infinity
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+  - name: http
+    port: 23820
+    targetPort: 23820
+  - name: thrift
+    port: 23817
+    targetPort: 23817
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+  selector:
+    app: infinity

@@ -1,0 +1,23 @@
+metadata:
+  title: Coder
+  description: Self-Hosted Cloud Development Environments.
+spec:
+  fullDescription: |
+    Coder is a self-hosted, open source, cloud development environment that works with any cloud, IDE, OS, Git provider, and IDP.
+    
+    Coder enables organizations to set up development environments in their public or private cloud infrastructure. Cloud development environments are defined with Terraform, connected through a secure high-speed Wireguard® tunnel, and automatically shut down when not used to save on costs. Coder gives engineering teams the flexibility to use the cloud for workloads most beneficial to them.
+
+    - Define cloud development environments in Terraform
+      - EC2 VMs, Kubernetes Pods, Docker Containers, etc.
+    - Automatically shutdown idle resources to save on costs
+    - Onboard developers in seconds instead of days
+    
+  upgradeDescription: |
+    Chart 1.0.23 upgrades Coder from v2.31.9 to v2.36.6.
+    Image: docker.io/beclab/coder-coder:v2.36.6.
+
+    The PostgreSQL connection, access URL, and optional Anthropic key stay as they are. Coder applies database migrations on startup. When public.schema_migrations already exists, an init container writes a PostgreSQL custom-format dump to appData/backups/chart-1.0.23/coder.dump first. Later starts and a database without that table skip the dump. The liveness probe waits longer so a migration is not killed mid-run.
+
+    v2.36 converts existing login_type=none accounts to password login, disables new OAuth2 dynamic client registration unless oauth2_dcr_enabled is turned on, and drops chat_model_configs.provider. This chart does not create login_type=none users.
+
+    Release notes: https://github.com/coder/coder/releases/tag/v2.36.6

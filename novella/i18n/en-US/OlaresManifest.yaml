@@ -1,0 +1,21 @@
+metadata:
+  title: Novel
+  description: Notion-style WYSIWYG editor with AI-powered autocompletion
+spec:
+  fullDescription: |
+    Novel is a web-based open-source WYSIWYG (What You See Is What You Get) editor inspired by Notion, offering AI-powered autocompletions.
+
+    It is particularly useful for those who write long-form content, such as essays or reports, and helps them maintain a consistent tone and style throughout their writing.
+
+    **Key Features:**
+    - WYSIWYG Editing: Offers a user-friendly editing experience where users can see how the content will appear in real-time.
+
+    - AI Autocompletions:
+    Employs AI-powered autocompletions to suggest relevant words, phrases, and sentences as users type.
+
+    - Open-Source:
+    Allows developers to contribute, customize, and extend the tool's functionality as per their requirements.
+  upgradeDescription: |
+    Wire AI credentials from Olares global settings (Settings → Integration → OpenAI / Custom OpenAI) into container env vars instead of a mounted /src/.env file.
+
+    OPENAI_API_KEY prefers OLARES_USER_CUSTOM_OPENAI_APIKEY when set, otherwise OLARES_USER_OPENAI_APIKEY. OPENAI_BASE_URL comes from OLARES_USER_CUSTOM_OPENAI_SERVICE (leave empty for OpenAI official default).

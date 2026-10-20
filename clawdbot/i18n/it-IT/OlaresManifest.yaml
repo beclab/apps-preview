@@ -1,0 +1,49 @@
+metadata:
+  title: OpenClaw
+  description: Assistente AI personale con supporto inbox multicanale
+spec:
+  fullDescription: |
+    **OpenClaw** è un _assistente AI personale_ che esegui sui tuoi dispositivi.
+    Ti risponde sui canali che già usi. Può parlare e ascoltare su macOS/iOS/Android e può renderizzare un Canvas live che controlli. Il Gateway è solo il control plane — il prodotto è l’assistente.
+
+    Se vuoi un assistente personale single-user che sembri locale, veloce e sempre attivo, è questo.
+
+    **Tips**
+    Gateway Restart
+    - `openclaw gateway restart` NON funziona nei deployment containerizzati. Usa `restart-gateway` per abbattere il gateway in esecuzione, caricare la config più recente e tornare online in ~5 secondi. Lo stesso sentinel accorcia anche la finestra di backoff di 30 secondi post-crash.
+
+    Canali supportati: 
+    WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, iMessage, BlueBubbles, IRC, Microsoft Teams, Matrix, Feishu, LINE, Mattermost, Nextcloud Talk, Nostr, Synology Chat, Tlon, Twitch, Zalo, Zalo Personal, WeChat, QQ, WebChat.
+
+    **Highlights**
+    - **[Local-first Gateway](https://docs.openclaw.ai/gateway)** — singolo control plane per sessioni, canali, tool ed eventi.
+    - **[Multi-channel inbox](https://docs.openclaw.ai/channels)** — WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, BlueBubbles (iMessage), iMessage (legacy), IRC, Microsoft Teams, Matrix, Feishu, LINE, Mattermost, Nextcloud Talk, Nostr, Synology Chat, Tlon, Twitch, Zalo, Zalo Personal, WeChat, QQ, WebChat, macOS, iOS/Android.
+    - **[Multi-agent routing](https://docs.openclaw.ai/gateway/configuration)** — instrada canali/account/peer in ingresso verso agent isolati (workspace + sessioni per agent).
+    - **[Voice Wake](https://docs.openclaw.ai/nodes/voicewake) + [Talk Mode](https://docs.openclaw.ai/nodes/talk)** — wake word su macOS/iOS e voce continua su Android (ElevenLabs + fallback TTS di sistema).
+    - **[Live Canvas](https://docs.openclaw.ai/platforms/mac/canvas)** — workspace visuale guidato dall’agent con [A2UI](https://docs.openclaw.ai/platforms/mac/canvas#canvas-a2ui).
+    - **[First-class tools](https://docs.openclaw.ai/tools)** — browser, canvas, nodes, cron, sessions e azioni Discord/Slack.
+    - **[Companion apps](https://docs.openclaw.ai/platforms/macos)** — app menu bar macOS + [nodes](https://docs.openclaw.ai/nodes) iOS/Android.
+    - **[Onboarding](https://docs.openclaw.ai/start/wizard) + [skills](https://docs.openclaw.ai/tools/skills)** — setup guidato dall’onboarding con skill bundled/managed/workspace.
+
+  upgradeDescription: |
+    Evita modifiche ricorsive a proprietari e permessi durante l’avvio. Prepara solo le directory indicate e inizializza i file con UID/GID 1000, preservando i permessi esistenti. Gli aggiornamenti Homebrew supportano nuovi tentativi dopo interruzioni e file di pacchetto di sola lettura. I problemi di proprietà esistenti richiedono una riparazione esplicita separata.
+
+    Corregge l’accesso al token e i controlli Doctor nel terminale condividendo lo spazio dei nomi dei processi tra CLI e Gateway. Il terminale di ripristino resta disponibile durante i riavvii di Gateway.
+
+    Il chart 1.0.54 aggiorna OpenClaw alla versione 2026.10.5.
+
+    Novità principali: migliore ripresa delle conversazioni interrotte dopo il riavvio di Gateway; meno operazioni SQLite per sessioni e cronologia e minore uso di memoria; applicazione dei cataloghi di modelli scaricati senza riavviare Gateway, mantenendo i limiti di contesto e gli strumenti correnti dei modelli del router llama.cpp durante gli aggiornamenti.
+
+    https://github.com/openclaw/openclaw/releases/tag/v2026.10.5
+
+    Il chart 1.0.53 aggiorna OpenClaw alla versione 2026.10.1.
+
+    Questa versione aggiunge il supporto per Claude Haiku 5.5 e migra gli agenti esistenti a Claws locali. I valori store/load di Code Mode vengono conservati tra le risposte e dopo i riavvii del Gateway.
+
+    Migliora il recupero dopo interruzioni del database e di Doctor, la gestione della proprietà dello stato tra container Docker CLI e dopo la loro ricreazione, la continuità delle sessioni e l’avvio dei plugin. Corregge inoltre la consegna delle risposte, la riproduzione multimediale e diverse integrazioni con fornitori di modelli.
+
+    Olares continua a eseguire Doctor dall’immagine prima dell’avvio dell’applicazione e usa la stessa immagine per CLI e Gateway. Eseguire gli aggiornamenti tramite il Mercato Olares.
+
+    Eseguire il backup dei dati dell’applicazione prima dell’aggiornamento. Doctor può migrare lo stato persistente; installare un’immagine precedente non annulla queste migrazioni.
+
+    Note di rilascio: https://github.com/openclaw/openclaw/releases/tag/v2026.10.1

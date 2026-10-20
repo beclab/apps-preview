@@ -1,0 +1,201 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: homeassistant
+spec:
+  replicas: {{ .Values.workloads.homeassistant.replicaCount }}
+  selector:
+    matchLabels:
+      app: homeassistant
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        # Re-run init containers on Chart-only HTTP bootstrap fixes too.
+        homeassistant.olares.io/bootstrap-version: {{ .Chart.Version | quote }}
+      labels:
+        app: homeassistant
+        applications.app.bytetrade.io/macvlan-init: "true"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+      initContainers:
+        - name: init-chmod-data
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          command:
+            - sh
+            - '-c'
+            - |
+              set -e
+              DEST=/homeassistant-config
+
+              # Empty/invalid .HA_VERSION crashes Core (AwesomeVersionCompareException).
+              if [ -f "${DEST}/.HA_VERSION" ]; then
+                ver="$(tr -d '[:space:]' < "${DEST}/.HA_VERSION" 2>/dev/null || true)"
+                if [ -z "${ver}" ]; then
+                  echo "[init] removing empty .HA_VERSION"
+                  rm -f "${DEST}/.HA_VERSION"
+                fi
+              fi
+
+              cp /config/configuration.yaml "${DEST}/configuration.yaml"
+              mkdir -p "${DEST}/themes"
+              [ -f "${DEST}/automations.yaml" ] || echo "[]" > "${DEST}/automations.yaml"
+              for f in scripts.yaml scenes.yaml; do
+                [ -f "${DEST}/$f" ] || touch "${DEST}/$f"
+              done
+              chown -R 1000:1000 "${DEST}"
+          resources: {}
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: homeassistant-config
+              mountPath: /homeassistant-config
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+        - name: init-http-config
+          image: "beclab/homeassistant-home-assistant:2026.10.0"
+          command:
+            - python3
+            - /bootstrap/http-bootstrap.py
+          resources: {}
+          volumeMounts:
+            - name: config
+              mountPath: /bootstrap
+            - name: homeassistant-config
+              mountPath: /homeassistant-config
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 1000
+      containers:
+        - name: homeassistant
+          image: "beclab/homeassistant-home-assistant:2026.10.0"
+          {{- if eq (toString .Values.olaresEnv.USB_PASSTHROUGH) "true" }}
+          securityContext:
+            privileged: true
+          {{- end }}
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 3Gi
+          ports:
+            - containerPort: 8123
+          startupProbe:
+            httpGet:
+              path: /
+              port: 8123
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8123
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8123
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          volumeMounts:
+            - mountPath: /config
+              name: homeassistant-config
+            - mountPath: /etc/localtime
+              name: homeassistant-localtime
+              readOnly: true
+            {{- if eq (toString .Values.olaresEnv.USB_PASSTHROUGH) "true" }}
+            - mountPath: {{ .Values.olaresEnv.USB_DEVICE_PATH }}
+              name: usb-device
+            {{- end }}
+        - name: nginx
+          image: "docker.io/beclab/aboveos-nginx:1.27.0"
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          ports:
+            - containerPort: 8001
+          imagePullPolicy: IfNotPresent
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        {{- if eq (toString .Values.olaresEnv.USB_PASSTHROUGH) "true" }}
+        - name: usb-device
+          hostPath:
+            path: {{ .Values.olaresEnv.USB_DEVICE_PATH }}
+            type: CharDevice
+        {{- end }}
+        - name: homeassistant-config
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}'
+        - name: homeassistant-localtime
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appData }}/localtime'
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-config
+            items:
+              - key: configuration.yaml
+                path: configuration.yaml
+              - key: http-bootstrap.py
+                path: http-bootstrap.py
+            defaultMode: 420
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+            defaultMode: 438
+            items:
+              - key: nginx.conf
+                path: nginx.conf

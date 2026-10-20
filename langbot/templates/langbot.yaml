@@ -1,0 +1,88 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: langbot
+  name: langbot
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.langbot.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: langbot
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: langbot
+    spec:
+      containers:
+        - image: docker.io/beclab/rockchin-langbot:v3.4.13
+          name: langbot
+          ports:
+            - containerPort: 5300
+          env:
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: Asia/Shanghai
+            - name: DISPLAY
+              value: ':0'
+          resources:
+            requests:
+              cpu: 200m
+              memory: 200Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - name: app-plugins
+              mountPath: /app/plugins
+            - name: app-data
+              mountPath: /app/data
+      volumes:
+        - name: app-data
+          hostPath:
+            type: DirectoryOrCreate
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: '{{ .Values.userspace.appData }}/app-data'
+              {{- else }}
+            path: '{{ .Values.userspace.appData }}/langbot/app-data'
+              {{- end }}
+            {{- else }}
+            path: '{{ .Values.userspace.appData }}/langbot/app-data'
+            {{- end }}
+        - name: app-plugins
+          hostPath:
+            type: DirectoryOrCreate
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: '{{ .Values.userspace.appData }}/app-plugins'
+              {{- else }}
+            path: '{{ .Values.userspace.appData }}/langbot/app-plugins'
+              {{- end }}
+            {{- else }}
+            path: '{{ .Values.userspace.appData }}/langbot/app-plugins'
+            {{- end }}
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langbot-svc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: langbot
+spec:
+  ports:
+    - name: 'http'
+      port: 5300
+      targetPort: 5300
+  selector:
+    io.kompose.service: langbot

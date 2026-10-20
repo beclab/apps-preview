@@ -1,0 +1,126 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: deluge
+spec:
+  replicas: {{ .Values.workloads.deluge.replicaCount }}
+  selector:
+    matchLabels:
+      app: deluge
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: deluge
+    spec:
+      initContainers:
+      - name: init-deluge
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        command:
+          - sh
+          - '-c'
+          - |
+            sh /chart-init/init.sh
+        resources: {}
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: home-downloads
+          mountPath: /olares/userdata/home
+        - name: deluge-config
+          mountPath: /config
+        - name: deluge-init
+          mountPath: /chart-init
+          readOnly: true
+        - name: deluge-defaults
+          mountPath: /chart-defaults
+          readOnly: true
+        securityContext:
+          runAsUser: 0
+      containers:
+      - env:
+        - name: PGID
+          value: "1000"
+        - name: PUID
+          value: "1000"
+        - name: TZ
+          value: UTC
+        name: deluge
+        image: "linuxserver/deluge:2.2.0"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        ports:
+        - containerPort: 8112
+          protocol: TCP
+        - containerPort: 6881
+          protocol: TCP
+        - containerPort: 6881
+          protocol: UDP
+        volumeMounts:
+        - mountPath: /config
+          name: deluge-config
+        - mountPath: /olares/userdata/home
+          name: home-downloads
+        - mountPath: /olares/userdata/external
+          name: external-downloads
+        - mountPath: /downloads
+          name: home-downloads
+          subPath: Downloads
+      volumes:
+      - name: deluge-config
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.appData }}
+      - name: home-downloads
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.userData }}
+      - name: external-downloads
+        hostPath:
+          type: DirectoryOrCreate
+          path: "{{ .Values.sharedlib }}"
+      - name: deluge-init
+        configMap:
+          name: deluge-init
+          defaultMode: 438
+          items:
+          - key: init.sh
+            path: init.sh
+      - name: deluge-defaults
+        configMap:
+          name: deluge-defaults
+          defaultMode: 438
+          items:
+          - key: core.conf
+            path: core.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+    - name: webui-http
+      protocol: TCP
+      port: 8112
+      targetPort: 8112
+    - name: inbound-tcp
+      protocol: TCP
+      port: 6881
+      targetPort: 6881
+    - name: inbound-udp
+      protocol: UDP
+      port: 6881
+      targetPort: 6881

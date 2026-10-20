@@ -1,0 +1,13 @@
+image:
+  version: '18'
+
+userspace:
+  appdata: ""
+
+postgres:
+  host: local
+  port: 5432
+  password: default
+workloads:
+  odoo:
+    replicaCount: 1

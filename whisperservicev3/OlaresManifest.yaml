@@ -1,0 +1,281 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+metadata:
+  name: whisperservicev3
+  icon: https://app.cdn.olares.com/appstore/whisperwebui/icon.png
+  description: FastAPI service on top of WhisperX
+  appid: whisperservicev3
+  title: Whisper API
+  version: '1.1.25'
+  categories:
+  - AI
+  - Utilities_v112
+  - models
+  tags:
+  - audio
+  - speech-to-text
+
+sharedEntrances:
+- name: whisperservicev3
+  title: Whisper API
+  host: sharedentrances-api
+  icon: https://app.cdn.olares.com/appstore/whisperwebui/icon.png
+  port: 0
+  invisible: true
+  authLevel: internal
+
+entrances:
+- authLevel: internal
+  host: whisperapi-web-svc
+  icon: https://app.cdn.olares.com/appstore/whisperwebui/icon.png
+  name: whisperservicev3
+  openMethod: window
+  port: 8080
+  title: Whisper API
+
+workloadReplicas:
+  whisperservicev3: 1
+  whisperservicev3download: 1
+  whisperserviceclient: 1
+
+permission:
+  appData: true
+  appCache: true
+  # appCommon: shared cross-app HF Hub cache (/cache/hf/hub) populated by the
+  # llm-init downloader (faster-whisper + pyannote) and read by the engine.
+  appCommon: true
+  userData:
+  - Home
+
+spec:
+  versionName: '0.8.0'
+  fullDescription: |
+    **IMPORTANT NOTE**
+    This is a shared app. Only one service will be installed across the entire Olares system. Every user can install a desktop entry to access or use the shared entrance to call the service API.
+
+    **PREREQUISITES**
+    Before installing, configure **HF_TOKEN** (mapped from your Olares Hugging Face token) and **HF_ENDPOINT**. The installing admin's token must have **accepted the terms of use** on Hugging Face for these gated repositories:
+    - `pyannote/speaker-diarization-3.1`
+    - `pyannote/segmentation-3.0`
+
+    Models are downloaded at install time via llm-init into the shared HF cache:
+    - `Systran/faster-whisper-large-v3` (ASR, default)
+    - `pyannote/speaker-diarization-3.1` and `pyannote/segmentation-3.0` (speaker diarization)
+    - `jonatasgrosman/wav2vec2-large-xlsr-53-chinese-zh-cn` (Chinese word-level alignment)
+
+    **PERFORMANCE NOTE**
+    The first transcription after install may take noticeably longer while models are loaded into GPU memory; subsequent requests are faster.
+
+    **OVERVIEW**
+    The whisperX API is a tool for enhancing and analyzing audio content. This API provides a suite of services for processing audio and video files, including transcription, alignment, diarization, and combining transcript with diarization results.
+
+    Available Services
+    **Speech-to-Text (/speech-to-text)**
+    - Upload audio/video files for transcription
+    - Supports multiple languages and Whisper models
+
+    **Speech-to-Text URL (/speech-to-text-url)**
+    - Transcribe audio/video from URLs
+    - Same features as direct upload
+
+    **Individual Services:**
+    - Transcribe (/service/transcribe): Convert speech to text
+    - Align (/service/align): Align transcript with audio
+    - Diarize (/service/diarize): Speaker diarization
+    - Combine (/service/combine): Merge transcript with diarization
+
+    **Task Management:**
+    - Get all tasks (/task/all)
+    - Get task status (/task/{identifier})
+
+    **Health Check Endpoints:**
+    - Basic health check (/health): Simple service status check
+    - Liveness probe (/health/live): Verifies if application is running
+    - Readiness probe (/health/ready): Checks if application is ready to accept requests (includes database connectivity check)
+
+    **Task history**
+
+    Task history is automatically migrated and stored persistently during upgrades. No manual database backup is required.
+
+    **Audio deletion and retention**
+
+    AUTO_DELETE_SOURCE_AUDIO=true removes managed uploads, URL downloads, and converted audio after processing, including failed requests. AUTO_CLEANUP_SOURCE_AUDIO=true checks hourly and removes expired retained files and abandoned requests, while skipping active requests. SOURCE_AUDIO_RETENTION_HOURS defaults to 24 (whole hours, 1–8760); the age starts at request completion, or folder creation for abandoned requests. This retention period does not delay immediate deletion.
+
+    To keep audio for 7 days, set AUTO_DELETE_SOURCE_AUDIO=false, AUTO_CLEANUP_SOURCE_AUDIO=true, and SOURCE_AUDIO_RETENTION_HOURS=168. Set both switches to false for indefinite retention. Re-enabling cleanup can delete previously retained expired files; changing settings cannot restore deleted files.
+
+    AUDIO_CLEANUP_TOKEN is an optional secret for GET /storage/audio and POST /storage/audio/cleanup. Leave it empty to disable these endpoints. Send Authorization: Bearer <token> to use them. Manual cleanup defaults to preview (dry_run=true); dry_run=false deletes eligible files even when automatic cleanup is disabled. Keep this token private.
+
+    Original files, transcription results, task records, models, and legacy data are preserved. Existing historical files are not automatically cleaned.
+
+  upgradeDescription: |
+    v1.1.25: Improve upgrade compatibility and store upgrade backups separately from historical audio.
+
+    v1.1.24: Automatically delete request-owned audio, add configurable retention and protected cleanup, persist task results. Existing historical files are preserved.
+
+    v1.1.23: Model Console (llm-init) updated to v1.7.21.
+
+    Run the OpenResty entrance as uid/gid 1000 and move its PID, logs, and
+    temporary request paths to writable locations.
+
+    Switch the reverse-proxy image from Bitnami OpenResty (`beclab/aboveos-bitnami-openresty:1.25.3-2`) to the official OpenResty image `openresty/openresty:1.29.2.5-bookworm-fat`.
+
+    Align nginx config mounts and log paths with the official image layout (`/etc/nginx/conf.d/default.conf`, `/usr/local/openresty/nginx/logs/...`), and drop Bitnami-specific `OPENRESTY_CONF_FILE` wiring.
+
+    v1.1.11: Map `HF_TOKEN` / `HF_ENDPOINT` from `OLARES_SYSTEM_HUGGINGFACE_*` (shared app); `HF_TOKEN` `required: false`.
+
+    Bump llm-init image to `beclab/llm-init:v1.3.1`.
+
+    Migrated Whisper API to the apiVersion v3 shared app pattern and switched
+    model provisioning to the shared llm-init downloader (whisperservicev2 →
+    whisperservicev3).
+
+    **What's Changed**
+
+    - **Runtime**: now runs the upstream image
+      `beclab/pavelzbornik-whisperx-fastapi:0.8.0` (whisperX-FastAPI 0.8.0); nltk
+      data and the VAD weight are baked into the image.
+    - **Model download**: replaced the bespoke `downloader-init` CDN tar.zst
+      bundle with an `llm-init:v1.3.1` download-only Deployment
+      (`whisperservicev3download`) that fetches the Hugging Face repos
+      (`Systran/faster-whisper-large-v3`, `pyannote/speaker-diarization-3.1`,
+      `pyannote/segmentation-3.0`) into the shared cross-app HF cache (App Common,
+      `/cache/hf/hub`). The engine reads them via `HF_HUB_CACHE` and gates on the
+      downloader's `/readyz`. The English alignment torchaudio weight is pulled
+      lazily by whisperX on first word-level alignment and cached in a persistent
+      `/root/.cache` hostPath. Diarization (pyannote) is gated — the admin HF
+      token must have accepted its terms.
+    - **Architecture**: flattened the whisperservicev2 / whisperservicev2server
+      sub-charts into a single chart. The engine Deployment is named after the
+      release (`{{ .Release.Name }}` == appid); the nginx entrance Deployment is
+      `whisperserviceclient`. Backends resolve within the release namespace
+      (dropping the `*-shared` admin / non-admin split).
+    - **Accelerator**: moved the GPU requirement into the accelerator modes list
+      (nvidia only; amd64-only app); raised `limitedMemory` to 24Gi to fit the
+      engine + downloader + nginx within the envelope.
+    - **Scaling**: `workloadReplicas` declares the `whisperservicev3` engine,
+      `whisperservicev3download` downloader, and `whisperserviceclient` nginx
+      entrance workloads.
+
+  developer: pavelzbornik
+  website: https://github.com/pavelzbornik/whisperX-FastAPI
+  sourceCode: https://github.com/pavelzbornik/whisperX-FastAPI
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  doc: https://github.com/pavelzbornik/whisperX-FastAPI
+  license:
+  - text: MIT License
+    url: https://github.com/pavelzbornik/whisperX-FastAPI?tab=MIT-1-ov-file
+  supportArch:
+  - amd64
+  onlyAdmin: true
+
+  accelerator:
+  - mode: cpu
+    requiredCpu: "1"
+    limitedCpu: "5"
+    requiredMemory: 3Gi
+    limitedMemory: 24Gi
+    requiredDisk: 12Gi
+    limitedDisk: 20Gi
+  - mode: nvidia
+    supportMultiCard: false
+    supportMultiNodes: false
+    requiredCpu: "1"
+    limitedCpu: "5"
+    requiredMemory: 3Gi
+    limitedMemory: 24Gi
+    requiredDisk: 12Gi
+    limitedDisk: 20Gi
+    requiredGPUMemory: 5Gi
+    limitedGPUMemory: 16Gi
+envs:
+- envName: AUTO_DELETE_SOURCE_AUDIO
+  type: bool
+  required: false
+  editable: true
+  applyOnChange: true
+  default: 'true'
+  description: >-
+    Default true. Deletes the copies of audio/video uploaded to the API, files downloaded
+    from URLs, and temporary audio generated by video conversion within each managed
+    request folder. Files can be deleted as soon as audio has been decoded into memory;
+    the remaining request files are removed when processing finishes or fails.
+    This does not wait for successful transcription. Original files on your device,
+    transcription results, task records, models, and files in the legacy data folder
+    are excluded. Set false to retain request files. For indefinite retention,
+    also set AUTO_CLEANUP_SOURCE_AUDIO to false. Deleted files cannot be restored
+    by changing this setting.
+- envName: AUTO_CLEANUP_SOURCE_AUDIO
+  type: bool
+  required: false
+  editable: true
+  applyOnChange: true
+  default: 'true'
+  description: >-
+    Default true. Checks once an hour and deletes managed request folders older than
+    SOURCE_AUDIO_RETENTION_HOURS, including retained uploads, URL downloads,
+    converted audio, and files left by interrupted requests. Active requests are
+    skipped. Transcription results, task records, models, and legacy data are
+    excluded. Set false to disable scheduled cleanup; this does not disable
+    immediate deletion by AUTO_DELETE_SOURCE_AUDIO or administrator-triggered
+    manual cleanup. Enabling this can delete previously retained files that
+    already exceed the retention period.
+- envName: SOURCE_AUDIO_RETENTION_HOURS
+  type: string
+  required: false
+  editable: true
+  applyOnChange: true
+  default: '24'
+  regex: '^([1-9][0-9]{0,2}|[1-7][0-9]{3}|8[0-6][0-9]{2}|87[0-5][0-9]|8760)$'
+  description: >-
+    Default 24 hours; enter a whole number from 1 to 8760. Used only when
+    AUTO_CLEANUP_SOURCE_AUDIO is true. For finished requests, the period starts
+    when the request finishes; for abandoned requests, it starts when the request
+    folder was created. Expired folders are removed at the next hourly check,
+    once they are no longer active. This does not delay immediate deletion when
+    AUTO_DELETE_SOURCE_AUDIO is true. To retain files for 7 days, set
+    AUTO_DELETE_SOURCE_AUDIO=false, AUTO_CLEANUP_SOURCE_AUDIO=true, and this
+    value to 168. Both deletion switches must be false for indefinite retention.
+- envName: AUDIO_CLEANUP_TOKEN
+  type: password
+  required: false
+  editable: true
+  applyOnChange: true
+  description: >-
+    Optional administrator token. Leave empty to disable the storage inspection
+    and manual cleanup endpoints. Set a strong secret token and send it as
+    Authorization: Bearer <token> when calling GET /storage/audio or
+    POST /storage/audio/cleanup. Manual cleanup defaults to a preview
+    (dry_run=true); dry_run=false deletes expired managed request folders.
+    Manual cleanup is available even when automatic cleanup is disabled.
+    It never deletes legacy data, transcription results, or active requests.
+    Keep this token private; anyone who has it can delete eligible request files.
+- envName: HF_TOKEN
+  required: false
+  applyOnChange: true
+  valueFrom:
+    envName: OLARES_SYSTEM_HUGGINGFACE_TOKEN
+- envName: HF_ENDPOINT
+  required: true
+  applyOnChange: true
+  valueFrom:
+    envName: OLARES_SYSTEM_HUGGINGFACE_SERVICE
+
+options:
+  shared: true
+  apiTimeout: 0
+  conflicts:
+  - name: whisperservicev2
+    type: application
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'

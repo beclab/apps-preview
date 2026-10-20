@@ -1,0 +1,21 @@
+# netdata-smtp-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netdata-smtp-config
+  namespace: {{ .Release.Namespace }}
+data:
+  msmtprc: |
+    defaults
+    auth           on
+    tls            off
+    logfile        /var/log/msmtp.log
+
+    account        netdata
+    host           {{ .Values.olaresEnv.SMTP_HOST }}
+    port           {{ .Values.olaresEnv.SMTP_PORT }}
+    from           {{ .Values.olaresEnv.SMTP_FROM }}
+    user           {{ .Values.olaresEnv.SMTP_USER }}
+    password       {{ .Values.olaresEnv.SMTP_PASSWORD }}
+
+    account default : netdata

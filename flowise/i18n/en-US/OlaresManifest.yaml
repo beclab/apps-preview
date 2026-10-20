@@ -1,0 +1,39 @@
+metadata:
+  title: Flowise
+  description: Drag & drop UI to build your customized LLM flow
+spec:
+  fullDescription: |
+    Flowise is an open source low-code tool for developers to build customized LLM orchestration flow & AI agents
+
+    **Features**
+    Iterate, fast
+    - Developing LLM apps takes countless iterations. With low code approach, we enable quick iterations to go from testing to production
+
+    LLM Orchestration
+    - Connect LLMs with memory, data loaders, cache, moderation and many more. (Langchain, LlamaIndex, 100+ integrations)
+
+    Agents & Assistants
+    - Create autonomous agent that can uses tools to execute different tasks. (Custom Tools, OpenAI Assistant, Function Agent)
+
+    API, SDK, Embed
+    - Extend and integrate to your applications using APIs, SDK and Embedded Chat
+
+    Open source LLMs
+    - Run in air-gapped environment with local LLMs, embeddings and vector databases
+
+  upgradeDescription: |
+    Upstream release: [Flowise 3.1.4](https://github.com/FlowiseAI/Flowise/releases/tag/flowise%403.1.4)
+
+    **What's changed**
+
+    - Tenant, workspace, session, SSO, and role checks are stricter.
+    - Custom MCP stdio commands are limited by an operator-controlled allowlist.
+    - Organization user records are sanitized before use.
+
+    **Fixes**
+
+    - Web scrapers and selected chat models honor deny lists.
+    - Flow exports no longer leak variable values.
+    - Request logs no longer record login passwords or SSO tokens.
+
+    The official `flowiseai/flowise:3.1.4` image may still report `3.1.2` from `/api/v1/version`. This is an upstream image packaging issue, not an Olares chart mismatch.

@@ -1,0 +1,114 @@
+﻿{{- $oe := .Values.olaresEnv | default dict -}}
+{{- $hfEndpoint := $oe.HF_ENDPOINT | default "" -}}
+{{- $hfToken := $oe.HF_TOKEN | default "" -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: localai
+  annotations:
+    applications.app.bytetrade.io/gpu-inject: "true"
+spec:
+  replicas: {{ .Values.workloads.localai.replicaCount }}
+  selector:
+    matchLabels:
+      app: localai
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: localai
+    spec:
+      containers:
+        - name: localai
+          image: "docker.io/localai/localai:v4.5.6-gpu-nvidia-cuda-12"
+          env:
+            - name: TZ
+              value: Etc/UTC
+            - name: DEBUG
+              value: "false"
+            - name: LOCALAI_MODELS_PATH
+              value: "/models"
+            - name: LOCALAI_DATA_PATH
+              value: "/data"
+            - name: LOCALAI_THREADS
+              value: "4"
+            - name: HF_HUB_CACHE
+              value: /cache/hf/hub
+{{- if $hfEndpoint }}
+            - name: HF_ENDPOINT
+              value: "{{ $hfEndpoint }}"
+{{- end }}
+{{- if $hfToken }}
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: HF_TOKEN
+{{- end }}
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: 2000m
+              memory: 16Gi
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 20
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 20
+            failureThreshold: 10
+          volumeMounts:
+            - mountPath: /models
+              name: localai-storage
+              subPath: models
+            - mountPath: /data
+              name: localai-storage
+              subPath: data
+            - name: hf-cache
+              mountPath: /cache/hf/hub
+      volumes:
+        - name: localai-storage
+          hostPath:
+            type: DirectoryOrCreate
+            path: "{{ .Values.userspace.appData }}"
+        - name: hf-cache
+          hostPath:
+            path: "{{ .Values.userspace.appCommon }}/huggingface"
+            type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localai
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: localai
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: localai

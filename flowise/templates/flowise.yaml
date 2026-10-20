@@ -1,0 +1,131 @@
+﻿---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: flowise
+spec:
+  replicas: {{ .Values.workloads.flowise.replicaCount }}
+  selector:
+    matchLabels:
+      app: flowise
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: flowise
+    spec:
+      enableServiceLinks: false
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        - name: init-permissions
+          image: docker.io/beclab/aboveos-busybox:1.37.0
+          command:
+            - sh
+            - -c
+            - |
+              for d in /home/node/.flowise /home/node/.flowise/logs /home/node/.flowise/storage; do
+                mkdir -p "$d" && chown 1000:1000 "$d"
+              done
+          securityContext:
+            runAsUser: 0
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          volumeMounts:
+            - mountPath: /home/node/.flowise
+              name: flowise-data
+      containers:
+        - name: flowise
+          image: "flowiseai/flowise:3.1.4"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: "Etc/UTC"
+            - name: DISPLAY
+              value: ":0"
+          envFrom:
+            - configMapRef:
+                name: flowise-config
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "300Mi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /api/v1/ping
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 40
+            timeoutSeconds: 5
+            periodSeconds: 15
+            successThreshold: 1
+            failureThreshold: 8
+          readinessProbe:
+            httpGet:
+              path: /api/v1/ping
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 20
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 12
+          volumeMounts:
+            - mountPath: /home/node/.flowise
+              name: flowise-data
+      volumes:
+        - name: flowise-data
+          hostPath:
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: "{{ .Values.userspace.appData }}"
+              {{- else }}
+            path: "{{ .Values.userspace.appData }}/flowise"
+              {{- end }}
+            {{- else }}
+            path: "{{ .Values.userspace.appData }}/flowise"
+            {{- end }}
+            type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flowise-svc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: flowise
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: flowise
+status:
+  loadBalancer: {}

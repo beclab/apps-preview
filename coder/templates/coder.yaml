@@ -1,0 +1,183 @@
+{{- $coderDomainENV := split "," .Values.domain.coder -}}
+{{- $coderDomain := index $coderDomainENV "_0" -}}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coder
+  namespace: {{ .Release.Namespace }}
+  labels:
+    io.kompose.service: coder
+spec:
+  replicas: {{ .Values.workloads.coder.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: coder
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: coder
+    spec:
+      initContainers:
+        - name: backup-postgres-before-upgrade
+          image: docker.io/beclab/postgres:17.5-alpine
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              DEST=/backup/backups/chart-1.0.23
+              MARKER="${DEST}/.backup_complete"
+              mkdir -p "$DEST"
+              if [ -f "$MARKER" ]; then
+                echo "[backup] marker present, skip."
+                exit 0
+              fi
+              table=$(psql "$CODER_PG_CONNECTION_URL" -tAc "SELECT to_regclass('public.schema_migrations')")
+              if [ -z "$table" ]; then
+                echo "[backup] no schema_migrations, skip."
+                exit 0
+              fi
+              pg_dump --dbname="$CODER_PG_CONNECTION_URL" --format=custom --file="${DEST}/coder.dump"
+              if [ ! -s "${DEST}/coder.dump" ]; then
+                echo "[backup] dump missing or empty, stop."
+                exit 1
+              fi
+              pg_restore --list "${DEST}/coder.dump" >/dev/null
+              echo "backed up" > "$MARKER"
+              echo "[backup] wrote ${DEST}/coder.dump"
+          env:
+            - name: CODER_PG_CONNECTION_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: CODER_PG_CONNECTION_URL
+          volumeMounts:
+            - name: coder-data
+              mountPath: /backup
+      containers:
+        - name: docker-dind
+          image: "docker.io/beclab/docker:29.3.0-dind"
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          command:
+            - "dockerd"
+            - "--host"
+            - "tcp://0.0.0.0:2375"
+            - "--host"
+            - "unix:///var/run/docker.sock"
+            - "--mtu=1450"
+          ports:
+            - containerPort: 2375
+          volumeMounts:
+            - mountPath: /var/lib/docker
+              name: dind-storage
+          resources:
+            requests:
+              cpu: 400m
+              memory: 400Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+        - name: coder
+          image: "docker.io/beclab/coder-coder:v2.36.6"
+          env:
+            - name: DOCKER_HOST
+              value: "tcp://localhost:2375"
+            - name: CODER_PG_CONNECTION_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: CODER_PG_CONNECTION_URL
+            - name: CODER_HTTP_ADDRESS
+              value: "0.0.0.0:7080"
+            - name: CODER_ACCESS_URL
+              value: "https://{{ $coderDomain }}"
+            - name: CODER_WILDCARD_ACCESS_URL
+              value: "*.{{ $coderDomain }}"
+            {{- if and .Values.olaresEnv .Values.olaresEnv.ANTHROPIC_API_KEY }}
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: ANTHROPIC_API_KEY
+            {{- end }}
+          ports:
+            - containerPort: 7080
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/coder
+              name: coder-data
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7080
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 0
+      volumes:
+        - name: coder-data
+          hostPath:
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: {{ .Values.userspace.appData }}
+              {{- else }}
+            path: {{ .Values.userspace.appData }}/coder
+              {{- end }}
+            {{- else }}
+            path: {{ .Values.userspace.appData }}/coder
+            {{- end }}
+            type: DirectoryOrCreate
+        - name: dind-storage
+          hostPath:
+            {{- if .Values.sysVersion }}
+              {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+            path: {{ .Values.userspace.appData }}/dind-storage
+              {{- else }}
+            path: {{ .Values.userspace.appData }}/coder/dind-storage
+              {{- end }}
+            {{- else }}
+            path: {{ .Values.userspace.appData }}/coder/dind-storage
+            {{- end }}
+            type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coder
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - name: http
+      port: 7080
+      targetPort: 7080
+  selector:
+    io.kompose.service: coder

@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 2.54.1
+description: A Helm chart for Kubernetes
+name: prometheusclient
+type: application
+version: 1.0.21

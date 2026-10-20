@@ -1,0 +1,64 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mindmap
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    io.kompose.service: mindmap
+spec:
+  replicas: {{ .Values.workloads.mindmap.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: mindmap
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: mindmap
+    spec:
+      containers:
+        - name: mindmap
+          image: "docker.io/madeliney/mind-map:0.19.0"
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+          env:
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: Etc/UTC
+            - name: DISPLAY
+              value: ":0"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 200Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mindmap
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    io.kompose.service: mindmap
+spec:
+  ports:
+    - name: "8080"
+      port: 8080
+      targetPort: 3000
+  selector:
+    io.kompose.service: mindmap
+status:
+  loadBalancer: {}

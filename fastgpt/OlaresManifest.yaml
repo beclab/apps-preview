@@ -1,0 +1,144 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  aiproxy: 1
+  fastgpt: 1
+  minio: 1
+  mongo: 1
+  plugin: 1
+  fastgpt-redis: 1
+metadata:
+  name: fastgpt
+  description: A knowledge-based platform built on the LLMs
+  icon: https://app.cdn.olares.com/appstore/fastgpt/icon.png
+  appid: fastgpt
+  version: '1.0.19'
+  title: FastGPT
+  categories:
+  - Productivity_v112
+
+permission:
+  appData: true
+  appCache: true
+  userData:
+    - Home
+spec:
+  versionName: '4.14.23'
+  featuredImage: https://app.cdn.olares.com/appstore/fastgpt/1.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/fastgpt/1.webp
+  - https://app.cdn.olares.com/appstore/fastgpt/2.webp
+  - https://app.cdn.olares.com/appstore/fastgpt/3.webp
+  - https://app.cdn.olares.com/appstore/fastgpt/4.webp
+  - https://app.cdn.olares.com/appstore/fastgpt/5.webp
+  fullDescription: |
+    **Overview**
+    FastGPT is a knowledge-based platform built on the LLMs, offers a comprehensive suite of out-of-the-box capabilities such as data processing, RAG retrieval, and visual AI workflow orchestration, letting you easily develop and deploy complex question-answering systems without the need for extensive setup or configuration.
+
+    **Features**
+    Application Orchestration Features
+    - Offers a straightforward mode, eliminating the need for complex orchestration
+    - Provides clear next-step instructions in dialogues
+    - Facilitates workflow orchestration
+    - Tracks references in source files
+    - Encapsulates modules for enhanced reuse at multiple levels
+    - Combines search and reordering functions
+    - Includes a tool module
+    - Integrates Laf for online HTTP module creation
+    - Plugin encapsulation capabilities
+
+    Knowledge Base Features
+    - Allows for the mixed use of multiple databases
+    - Keeps track of modifications and deletions in data chunks
+    - Enables specific vector models for each knowledge base
+    - Stores original source files
+    - Supports direct input and segment-based QA import
+    - Compatible with a variety of file formats: pdf, docx, txt, html, md, csv
+    - Facilitates URL reading and bulk CSV importing
+    - Supports PPT and Excel file import
+    - Features a file reader
+    - Offers diverse data preprocessing options
+
+    Application Debugging Features
+    - Enables targeted search testing within the knowledge base
+    - Allows feedback, editing, and deletion during conversations
+    - Presents the full context of interactions
+    - Displays all intermediate values within modules
+    - Advanced Debug mode for orchestration
+
+    OpenAPI Interface
+    - The completions interface (aligned with GPT's chat mode interface)
+    - CRUD operations for the knowledge base
+    - CRUD operations for conversation
+
+    Operational Features
+    - Share without requiring login
+    - Easy embedding with Iframe
+    - Customizable chat window embedding with features like default open, drag-and-drop
+    - Centralizes conversation records for review and annotation
+  upgradeDescription: |
+    v1.0.19: Fix plugin CrashLoop — mount `fastgpt-secrets` so plugin gets `MONGODB_URI` after the Secret migration.
+    v1.0.18: Move DB URLs, root password, AES key, and MinIO / aiproxy credentials into Kubernetes Secret (`secretKeyRef` / `secretRef`).
+
+    Storage: durable volumes moved from `appCache` to `appData`. On first start after upgrade, initContainers copy legacy appCache contents into appData when the destination is empty (marker: `.migration_from_appcache_done`). Old appCache data is left intact for rollback.
+
+    Drop legacy `sysVersion >= 1.12.3` appCache path branching; Olares minimum is now 1.12.6.
+
+    MinIO object storage migrated from appCache to appData.
+  developer: labring
+  website: https://tryfastgpt.ai/
+  sourceCode: https://github.com/labring/FastGPT
+  submitter: Olares
+  doc: https://doc.tryfastgpt.ai/docs/
+  license:
+  - text: FastGPT Open Source License
+    url: https://github.com/labring/FastGPT?tab=License-1-ov-file#readme
+  locale:
+    - en-US
+    - zh-CN
+  requiredMemory: 3Gi
+  limitedMemory: 13Gi
+  requiredDisk: 50Mi
+  limitedDisk: 5Gi
+  requiredCpu: 2
+  limitedCpu: 5
+  supportArch:
+    - amd64
+    - arm64
+options:
+  apiTimeout: 0
+  allowedOutboundPorts:
+    - 465
+    - 587
+    - 27017
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+  policies:
+    - uriRegex: ^/(login)(/.*)?(\?.*)?$
+      level: one_factor
+      oneTime: false
+      validDuration: 3600s
+      entranceName: fastgpt
+    - uriRegex: ^/
+      level: public
+      oneTime: false
+      validDuration: 3600s
+      entranceName: fastgpt
+entrances:
+  - name: fastgpt
+    port: 3000
+    host: fastgpt-service
+    title: FastGPT
+    icon: https://app.cdn.olares.com/appstore/fastgpt/icon.png
+    authLevel: internal
+    openMethod: window
+
+envs:
+  - envName: DEFAULT_ROOT_PSW
+    type: password
+    required: true
+    editable: false

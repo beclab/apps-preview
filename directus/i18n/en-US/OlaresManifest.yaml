@@ -1,0 +1,37 @@
+metadata:
+  title: Directus
+  description: A composable data platform to build your Headless CMS, BaaS, and more.
+spec:
+  fullDescription: |
+    Directus turns your DB into a headless CMS, admin panels, or apps with a custom UI, instant APIs, auth & more.
+
+    Directus is a real-time API and App dashboard for managing SQL database content.
+    - REST & GraphQL API. Instantly layers a blazingly fast Node.js API on top of any SQL database.
+    - Manage Pure SQL. Works with new or existing SQL databases, no migration required.
+    - Choose your Database. Supports PostgreSQL, MySQL, SQLite, OracleDB, CockroachDB, MariaDB, and MS-SQL.
+    - On-Prem or Cloud. Run locally, install on-premises, or use our self-service Cloud service.
+    - Completely Extensible. Built to white-label, it is easy to customize our modular platform.
+    - A Modern Dashboard. Our no-code Vue.js app is safe and intuitive for non-technical users, no training required.
+
+    **Key Features**
+    Automate: Automate workflows, trigger actions, and connect your tools. Build powerful automation flows without writing a line of code.
+
+    Extend: Extend and customize every part of Directus. From custom interfaces to complex workflows, make it work exactly how your team needs.
+
+    Customize: Deliver a fully branded experience to your team or clients. Customize the interface to match your brand perfectly.
+
+    Visualize: Build custom dashboards that give your team real-time visibility into what matters most. Track metrics, spot trends, and make better decisions faster.
+
+  upgradeDescription: |
+    v1.0.26: Upgrade to official `directus/directus:12.3.1`. Chown appData uploads to uid 1000 so File Library writes succeed. Raise disk quota. Trust the Olares reverse proxy (`IP_TRUST_PROXY=true`).
+
+    Directus 12 breaking changes (read before upgrade):
+    - License enforcement: Core tier by default; SSO and custom policy rules need a license after a 30-day grace period on upgrades.
+    - WYSIWYG is Tiptap; TinyMCE `tinymceOverrides` no longer apply.
+    - `/utils/hash/generate` and `/utils/hash/verify` are removed.
+    - Flow Update/Delete Items no longer target all items when query is empty.
+    - WebSocket connections honor `CORS_ORIGIN`. The Docker image no longer includes npm/npx.
+
+    12.3.1: GraphQL fragments, WebSocket heartbeat leak, public registration email, MCP OAuth breadcrumbs.
+
+    See https://github.com/directus/directus/releases/tag/v12.3.1 and https://directus.com/docs/releases/breaking-changes/version-12

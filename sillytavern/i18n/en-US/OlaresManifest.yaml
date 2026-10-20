@@ -1,0 +1,40 @@
+metadata:
+  title: SillyTavern
+  description: LLM Frontend for Power Users
+spec:
+  fullDescription: |
+    SillyTavern is a locally installed user interface that allows you to interact with text generation LLMs, image generation engines, and TTS voice models.
+
+    Beginning in February 2023 as a fork of TavernAI 1.2.8, SillyTavern now has over 200 contributors and 2 years of independent development under its belt, and continues to serve as a leading software for savvy AI hobbyists.
+
+    **Key Features**
+    - Advanced text generation settings with many community-made presets
+    - World Info support: create rich lore or save tokens on your character card
+    - Group chats: multi-bot rooms for characters to talk to you and/or each other
+    - Rich UI customization options: theme colors, background images, custom CSS, and more
+    - User personas: let the AI know a bit about you for greater immersion
+    - Built-in RAG support: add documents to your chats for the AI to reference
+    - Extensive chat commands subsystem and own scripting engine
+    
+    **SillyTavern has extensibility support.**
+    - Character emotional expressions (sprites)
+    - Auto-Summary of the chat history
+    - Automatic UI and chat translation
+    - Stable Diffusion/FLUX/DALL-E image generation
+    - Text-to-speech for AI response messages
+    - Web Search capabilities for adding additional real world context to your prompts
+    - Many more are available to download from the "Download Extensions & Assets" menu.
+
+  upgradeDescription: |
+    Upstream release: [SillyTavern 1.18.0](https://github.com/SillyTavern/SillyTavern/releases/tag/1.18.0)
+
+    **What's changed**
+
+    - Cloudflare Workers AI and MiniMax chat-completion sources, plus broader model support including DeepSeek v4, GPT 5.4/5.5, Gemma 4, and Claude Opus 4.7.
+    - Rate limiting on basic authentication, an optional private-address whitelist against SSRF, and an IP whitelist for SSO trusted proxies.
+    - Third-party extension installs ask for confirmation. The assets list groups official and community extensions.
+
+    **Fixes**
+
+    - Text editing in Firefox on mobile, character-list filters on startup, and a server crash on empty cache-control messages.
+

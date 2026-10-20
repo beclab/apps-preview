@@ -1,0 +1,135 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  paperclip: 1
+  terminal: 1
+metadata:
+  name: paperclip
+  description: Open-source orchestration platform for AI agent companies.
+  icon: https://app.cdn.olares.com/appstore/paperclip/icon.png
+  appid: paperclip
+  version: '1.0.34'
+  title: Paperclip
+  categories:
+  - Productivity_v112
+  - agents
+  tags:
+  - framework
+
+spec:
+  versionName: '2026.1005.0'
+  promoteImage:
+    - https://app.cdn.olares.com/appstore/paperclip/1.webp
+    - https://app.cdn.olares.com/appstore/paperclip/2.webp
+    - https://app.cdn.olares.com/appstore/paperclip/3.webp
+    - https://app.cdn.olares.com/appstore/paperclip/4.webp
+  fullDescription: |
+    **Overview**
+    Paperclip is a Node.js server and React UI that orchestrates a team of AI agents to run a business. Bring your own agents, assign goals, and track your agents' work and costs from one dashboard.
+
+    If OpenClaw is an employee, Paperclip is the company.
+
+    **Features**
+    - Bring Your Own Agent - any agent, any runtime, one org chart (OpenClaw, Claude Code, Codex, Cursor)
+    - Goal Alignment - every task traces back to the company mission
+    - Heartbeats - agents wake on a schedule, check work, and act
+    - Cost Control - monthly budgets per agent with automatic enforcement
+    - Multi-Company - one deployment, many companies with complete data isolation
+    - Ticket System - every conversation traced with full tool-call tracing and audit log
+    - Governance - approve hires, override strategy, pause or terminate any agent
+    - Org Chart - hierarchies, roles, reporting lines for your agent team
+    - Mobile Ready - monitor and manage from anywhere
+    - External PostgreSQL support for production deployments
+  upgradeDescription: |
+    Updated Paperclip to v2026.1005.0.
+    https://github.com/paperclipai/paperclip/releases/tag/v2026.1005.0
+
+  developer: Paperclip AI
+  website: https://paperclip.ing/
+  sourceCode: https://github.com/paperclipai/paperclip
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  doc: https://github.com/paperclipai/paperclip#readme
+  license:
+  - text: MIT
+    url: https://github.com/paperclipai/paperclip/blob/master/LICENSE
+  requiredMemory: 2Gi
+  limitedMemory: 10Gi
+  requiredDisk: 256Mi
+  limitedDisk: 20Gi
+  requiredCpu: 1
+  limitedCpu: 6
+  supportArch:
+  - amd64
+  - arm64
+permission:
+  appData: true
+  appCache: true
+middleware:
+  postgres:
+    username: paperclip
+    password: paperclip
+    databases:
+    - name: paperclip
+      distributed: true
+options:
+  apiTimeout: 0
+  allowedOutboundPorts:
+    - 443
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+envs:
+  - envName: OPENAI_API_KEY
+    type: string
+    required: false
+    applyOnChange: true
+    editable: true
+    default: ""
+    description: "secret API key for the OpenAI API"
+  - envName: ANTHROPIC_API_KEY
+    type: string
+    required: false
+    applyOnChange: true
+    editable: true
+    default: ""
+    description: "secret API key for the Anthropic API"
+  - envName: GEMINI_API_KEY
+    type: string
+    required: false
+    applyOnChange: true
+    editable: true
+    default: ""
+    description: "secret API key for the Google Gemini API"
+  - envName: CURSOR_API_KEY
+    type: string
+    required: false
+    applyOnChange: true
+    editable: true
+    default: ""
+    description: "secret API key for the Cursor"
+entrances:
+- name: paperclip
+  port: 3100
+  host: paperclip
+  title: Paperclip
+  icon: https://app.cdn.olares.com/appstore/paperclip/icon.png
+  openMethod: window
+  authLevel: internal
+- name: terminal
+  port: 80
+  host: terminal
+  title: Paperclip CLI
+  icon: https://app.cdn.olares.com/appstore/paperclip/icon.png
+  openMethod: window
+  authLevel: internal

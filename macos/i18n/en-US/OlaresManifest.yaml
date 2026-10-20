@@ -1,0 +1,25 @@
+metadata:
+  title: MacOS
+  description: Run MacOS on Olares
+
+spec:
+  fullDescription: |
+    This app helps you run Macos on Olares.
+    Based on dockur's MacOS inside a Docker container.
+
+    **Features**
+    - KVM acceleration
+    - Web-based viewer  
+    - Automatic download
+
+    **Supported MasOS	Versions**
+    - macOS 14
+    - macOS 13
+    - macOS 12
+    - macOS 11
+  upgradeDescription: |
+    v1.0.14: Keep durable VM data on `appCache` (no appData migration); schedule only on control-plane (master).
+
+    Storage: durable volumes moved from `appCache` to `appData`. On first start after upgrade, initContainers copy legacy appCache contents into appData when the destination is empty (marker: `.migration_from_appcache_storage_done`). Old appCache data is left intact for rollback.
+
+    VM disk storage moved from appCache root to appData/storage.

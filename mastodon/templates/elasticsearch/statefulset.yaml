@@ -1,0 +1,709 @@
+﻿apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mastodon-elasticsearch-coordinating
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    helm.sh/chart: elasticsearch-19.5.5
+    app.kubernetes.io/instance: mastodon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: coordinating-only
+    ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+    app: coordinating-only
+spec:
+  replicas: {{ (index .Values.workloads "mastodon-elasticsearch-coordinating").replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: elasticsearch
+      app.kubernetes.io/instance: mastodon
+      app.kubernetes.io/component: coordinating-only
+  updateStrategy:
+    type: OnDelete
+  serviceName: mastodon-elasticsearch-coordinating-hl
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: elasticsearch
+        helm.sh/chart: elasticsearch-19.5.5
+        app.kubernetes.io/instance: mastodon
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: coordinating-only
+        ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+        app: coordinating-only
+      annotations:
+    spec:
+      serviceAccountName: default
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        ## Image that performs the sysctl operation to modify Kernel settings (needed sometimes to avoid boot errors)
+        - name: migrate-appcache-to-appdata
+          image: "docker.io/beclab/busybox:1.37"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              SOURCE=/old-data
+              DEST=/new-data
+              MARKER="${DEST}/.migration_from_appcache_done"
+              if [ -f "$MARKER" ]; then echo "[migrate] marker present, skip."; exit 0; fi
+              if [ -n "$(ls -A "$DEST" 2>/dev/null | grep -v '^\.migration_from_appcache_done$' || true)" ]; then
+                echo "[migrate] appData already has data, skip."
+                echo "skipped existing dest at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                exit 0
+              fi
+              if [ -n "$(ls -A "$SOURCE" 2>/dev/null || true)" ]; then
+                echo "[migrate] copying appCache -> appData..."
+                cp -a "$SOURCE"/. "$DEST"/
+                echo "migrated from appCache at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                echo "[migrate] done; legacy appCache left intact for rollback."
+              else
+                echo "[migrate] no legacy data, fresh install."
+                echo "fresh install at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              fi
+          volumeMounts:
+            - name: data-legacy
+              mountPath: /old-data
+              readOnly: true
+            - name: data
+              mountPath: /new-data
+        - name: sysctl
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              sysctl -w vm.max_map_count=262144 || true
+              sysctl -w fs.file-max=65536 || true
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          resources:
+            limits: {}
+            requests: {}
+        ## Image that sets permissions for data directory
+        - name: volume-permissions
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - sh
+            - -c
+            - |
+              chown -R 1000:1000 /usr/share/elasticsearch/data
+              chmod -R 755 /usr/share/elasticsearch/data
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      containers:
+        - name: elasticsearch
+          image: "docker.io/beclab/elasticsearch:8.19.9"
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: cluster.name
+              value: "elastic"
+            - name: node.name
+              value: "$(MY_POD_NAME)"
+            - name: discovery.seed_hosts
+              value: "mastodon-elasticsearch-master-hl.{{ .Release.Namespace }}.svc.cluster.local:9300,mastodon-elasticsearch-coordinating-hl.{{ .Release.Namespace }}.svc.cluster.local:9300,mastodon-elasticsearch-data-hl.{{ .Release.Namespace }}.svc.cluster.local:9300"
+            - name: cluster.initial_master_nodes
+              value: "mastodon-elasticsearch-master-0"
+            - name: network.host
+              value: "0.0.0.0"
+            - name: network.publish_host
+              value: "$(MY_POD_NAME).mastodon-elasticsearch-coordinating-hl.{{ .Release.Namespace }}.svc.cluster.local"
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+            - name: xpack.security.enabled
+              value: "false"
+            - name: xpack.security.transport.ssl.enabled
+              value: "false"
+          ports:
+            - name: rest-api
+              containerPort: 9200
+            - name: transport
+              containerPort: 9300
+          livenessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+          readinessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+          resources:
+            limits: 
+              cpu: 500m
+              memory: 1536Mi
+            requests:
+              cpu: 25m
+              memory: 1024Mi
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      volumes:
+        - name: data-legacy
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appCache }}/elasticsearch/data'
+        - name: data
+          hostPath:
+            path: '{{ .Values.userspace.appData }}/elasticsearch/coordinating'
+            type: DirectoryOrCreate
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mastodon-elasticsearch-data
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    helm.sh/chart: elasticsearch-19.5.5
+    app.kubernetes.io/instance: mastodon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: data
+    ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+    app: data
+spec:
+  replicas: {{ (index .Values.workloads "mastodon-elasticsearch-data").replicaCount }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: elasticsearch
+      app.kubernetes.io/instance: mastodon
+      app.kubernetes.io/component: data
+  serviceName: mastodon-elasticsearch-data-hl
+  updateStrategy:
+    type: OnDelete
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: elasticsearch
+        helm.sh/chart: elasticsearch-19.5.5
+        app.kubernetes.io/instance: mastodon
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: data
+        ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+        app: data
+      annotations:
+    spec:
+      serviceAccountName: default
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        ## Image that performs the sysctl operation to modify Kernel settings (needed sometimes to avoid boot errors)
+        - name: migrate-appcache-to-appdata
+          image: "docker.io/beclab/busybox:1.37"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              SOURCE=/old-data
+              DEST=/new-data
+              MARKER="${DEST}/.migration_from_appcache_done"
+              if [ -f "$MARKER" ]; then echo "[migrate] marker present, skip."; exit 0; fi
+              if [ -n "$(ls -A "$DEST" 2>/dev/null | grep -v '^\.migration_from_appcache_done$' || true)" ]; then
+                echo "[migrate] appData already has data, skip."
+                echo "skipped existing dest at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                exit 0
+              fi
+              if [ -n "$(ls -A "$SOURCE" 2>/dev/null || true)" ]; then
+                echo "[migrate] copying appCache -> appData..."
+                cp -a "$SOURCE"/. "$DEST"/
+                echo "migrated from appCache at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                echo "[migrate] done; legacy appCache left intact for rollback."
+              else
+                echo "[migrate] no legacy data, fresh install."
+                echo "fresh install at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              fi
+          volumeMounts:
+            - name: data-legacy
+              mountPath: /old-data
+              readOnly: true
+            - name: data
+              mountPath: /new-data
+        - name: sysctl
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              sysctl -w vm.max_map_count=262144 || true
+              sysctl -w fs.file-max=65536 || true
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          resources:
+            limits: {}
+            requests: {}
+        ## Image that sets permissions for data directory
+        - name: volume-permissions
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - sh
+            - -c
+            - |
+              chown -R 1000:1000 /usr/share/elasticsearch/data
+              chmod -R 755 /usr/share/elasticsearch/data
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      containers:
+        - name: elasticsearch
+          image: "docker.io/beclab/elasticsearch:8.19.9"
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: cluster.name
+              value: "elastic"
+            - name: node.name
+              value: "$(MY_POD_NAME)"
+            - name: node.roles
+              value: "data"
+            - name: discovery.seed_hosts
+              value: "mastodon-elasticsearch-master-hl.{{ .Release.Namespace }}.svc.cluster.local:9300,mastodon-elasticsearch-coordinating-hl.{{ .Release.Namespace }}.svc.cluster.local:9300,mastodon-elasticsearch-data-hl.{{ .Release.Namespace }}.svc.cluster.local:9300"
+            - name: cluster.initial_master_nodes
+              value: "mastodon-elasticsearch-master-0"
+            - name: network.host
+              value: "0.0.0.0"
+            - name: network.publish_host
+              value: "$(MY_POD_NAME).mastodon-elasticsearch-data-hl.{{ .Release.Namespace }}.svc.cluster.local"
+            - name: ES_JAVA_OPTS
+              value: "-Xms1536m -Xmx1536m"
+            - name: xpack.security.enabled
+              value: "false"
+            - name: xpack.security.transport.ssl.enabled
+              value: "false"
+          ports:
+            - name: rest-api
+              containerPort: 9200
+            - name: transport
+              containerPort: 9300
+          livenessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+          readinessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+          resources:
+            limits: 
+              cpu: 500m
+              memory: 4096Mi
+            requests:
+              cpu: 25m
+              memory: 3072Mi
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      volumes:
+        - name: data-legacy
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appCache }}/elasticsearch/data'
+        - name: data
+          hostPath:
+            path: '{{ .Values.userspace.appData }}/elasticsearch/data'
+            type: DirectoryOrCreate
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mastodon-elasticsearch-ingest
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    helm.sh/chart: elasticsearch-19.5.5
+    app.kubernetes.io/instance: mastodon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: ingest
+    ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+    app: ingest
+spec:
+  replicas: {{ (index .Values.workloads "mastodon-elasticsearch-ingest").replicaCount }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: elasticsearch
+      app.kubernetes.io/instance: mastodon
+      app.kubernetes.io/component: ingest
+  serviceName: mastodon-elasticsearch-ingest-hl
+  updateStrategy:
+    type: OnDelete
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: elasticsearch
+        helm.sh/chart: elasticsearch-19.5.5
+        app.kubernetes.io/instance: mastodon
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: ingest
+        ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+        app: ingest
+      annotations:
+    spec:
+      serviceAccountName: default
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        ## Image that performs the sysctl operation to modify Kernel settings (needed sometimes to avoid boot errors)
+        - name: migrate-appcache-to-appdata
+          image: "docker.io/beclab/busybox:1.37"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              SOURCE=/old-data
+              DEST=/new-data
+              MARKER="${DEST}/.migration_from_appcache_done"
+              if [ -f "$MARKER" ]; then echo "[migrate] marker present, skip."; exit 0; fi
+              if [ -n "$(ls -A "$DEST" 2>/dev/null | grep -v '^\.migration_from_appcache_done$' || true)" ]; then
+                echo "[migrate] appData already has data, skip."
+                echo "skipped existing dest at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                exit 0
+              fi
+              if [ -n "$(ls -A "$SOURCE" 2>/dev/null || true)" ]; then
+                echo "[migrate] copying appCache -> appData..."
+                cp -a "$SOURCE"/. "$DEST"/
+                echo "migrated from appCache at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                echo "[migrate] done; legacy appCache left intact for rollback."
+              else
+                echo "[migrate] no legacy data, fresh install."
+                echo "fresh install at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              fi
+          volumeMounts:
+            - name: data-legacy
+              mountPath: /old-data
+              readOnly: true
+            - name: data
+              mountPath: /new-data
+        - name: sysctl
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              sysctl -w vm.max_map_count=262144 || true
+              sysctl -w fs.file-max=65536 || true
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          resources:
+            limits: {}
+            requests: {}
+        ## Image that sets permissions for data directory
+        - name: volume-permissions
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - sh
+            - -c
+            - |
+              chown -R 1000:1000 /usr/share/elasticsearch/data
+              chmod -R 755 /usr/share/elasticsearch/data
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      containers:
+        - name: elasticsearch
+          image: "docker.io/beclab/elasticsearch:8.19.9"
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: cluster.name
+              value: "elastic"
+            - name: node.name
+              value: "$(MY_POD_NAME)"
+            - name: node.roles
+              value: "ingest"
+            - name: discovery.seed_hosts
+              value: "mastodon-elasticsearch-master-hl.{{ .Release.Namespace }}.svc.cluster.local:9300,mastodon-elasticsearch-coordinating-hl.{{ .Release.Namespace }}.svc.cluster.local:9300,mastodon-elasticsearch-data-hl.{{ .Release.Namespace }}.svc.cluster.local:9300"
+            - name: cluster.initial_master_nodes
+              value: "mastodon-elasticsearch-master-0"
+            - name: network.host
+              value: "0.0.0.0"
+            - name: network.publish_host
+              value: "$(MY_POD_NAME).mastodon-elasticsearch-ingest-hl.{{ .Release.Namespace }}.svc.cluster.local"
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+            - name: xpack.security.enabled
+              value: "false"
+            - name: xpack.security.transport.ssl.enabled
+              value: "false"
+          ports:
+            - name: rest-api
+              containerPort: 9200
+            - name: transport
+              containerPort: 9300
+          livenessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+          readinessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1536Mi
+            requests:
+              cpu: 25m
+              memory: 1024Mi
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      volumes:
+        - name: data-legacy
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appCache }}/elasticsearch/data'
+        - name: data
+          hostPath:
+            path: '{{ .Values.userspace.appData }}/elasticsearch/ingest'
+            type: DirectoryOrCreate
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mastodon-elasticsearch-master
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    helm.sh/chart: elasticsearch-19.5.5
+    app.kubernetes.io/instance: mastodon
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: master
+    ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+    app: master
+spec:
+  replicas: {{ (index .Values.workloads "mastodon-elasticsearch-master").replicaCount }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: elasticsearch
+      app.kubernetes.io/instance: mastodon
+      app.kubernetes.io/component: master
+  serviceName: mastodon-elasticsearch-master-hl
+  updateStrategy:
+    type: OnDelete
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: elasticsearch
+        helm.sh/chart: elasticsearch-19.5.5
+        app.kubernetes.io/instance: mastodon
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: master
+        ## Istio Labels: https://istio.io/docs/ops/deployment/requirements/
+        app: master
+      annotations:
+    spec:
+      serviceAccountName: default
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        ## Image that performs the sysctl operation to modify Kernel settings (needed sometimes to avoid boot errors)
+        - name: migrate-appcache-to-appdata
+          image: "docker.io/beclab/busybox:1.37"
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              SOURCE=/old-data
+              DEST=/new-data
+              MARKER="${DEST}/.migration_from_appcache_done"
+              if [ -f "$MARKER" ]; then echo "[migrate] marker present, skip."; exit 0; fi
+              if [ -n "$(ls -A "$DEST" 2>/dev/null | grep -v '^\.migration_from_appcache_done$' || true)" ]; then
+                echo "[migrate] appData already has data, skip."
+                echo "skipped existing dest at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                exit 0
+              fi
+              if [ -n "$(ls -A "$SOURCE" 2>/dev/null || true)" ]; then
+                echo "[migrate] copying appCache -> appData..."
+                cp -a "$SOURCE"/. "$DEST"/
+                echo "migrated from appCache at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+                echo "[migrate] done; legacy appCache left intact for rollback."
+              else
+                echo "[migrate] no legacy data, fresh install."
+                echo "fresh install at $(date -Iseconds 2>/dev/null || date)" > "$MARKER"
+              fi
+          volumeMounts:
+            - name: data-legacy
+              mountPath: /old-data
+              readOnly: true
+            - name: data
+              mountPath: /new-data
+        - name: sysctl
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              sysctl -w vm.max_map_count=262144 || true
+              sysctl -w fs.file-max=65536 || true
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          resources:
+            limits: {}
+            requests: {}
+        ## Image that sets permissions for data directory
+        - name: volume-permissions
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          imagePullPolicy: "IfNotPresent"
+          command:
+            - sh
+            - -c
+            - |
+              chown -R 1000:1000 /usr/share/elasticsearch/data
+              chmod -R 755 /usr/share/elasticsearch/data
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      containers:
+        - name: elasticsearch
+          image: "docker.io/beclab/elasticsearch:8.19.9"
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: cluster.name
+              value: "elastic"
+            - name: node.name
+              value: "$(MY_POD_NAME)"
+            - name: node.roles
+              value: "master"
+            - name: discovery.seed_hosts
+              value: "mastodon-elasticsearch-master-hl.{{ .Release.Namespace }}.svc.cluster.local:9300,mastodon-elasticsearch-coordinating-hl.{{ .Release.Namespace }}.svc.cluster.local:9300,mastodon-elasticsearch-data-hl.{{ .Release.Namespace }}.svc.cluster.local:9300"
+            - name: cluster.initial_master_nodes
+              value: "mastodon-elasticsearch-master-0"
+            - name: network.host
+              value: "0.0.0.0"
+            - name: network.publish_host
+              value: "$(MY_POD_NAME).mastodon-elasticsearch-master-hl.{{ .Release.Namespace }}.svc.cluster.local"
+            - name: ES_JAVA_OPTS
+              value: "-Xms256m -Xmx256m"
+            - name: xpack.security.enabled
+              value: "false"
+            - name: xpack.security.transport.ssl.enabled
+              value: "false"
+          ports:
+            - name: rest-api
+              containerPort: 9200
+            - name: transport
+              containerPort: 9300
+          livenessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+          readinessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+          resources:
+            limits: 
+              cpu: 500m
+              memory: 1024Mi
+            requests:
+              cpu: 25m
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      volumes:
+        - name: data-legacy
+          hostPath:
+            type: DirectoryOrCreate
+            path: '{{ .Values.userspace.appCache }}/elasticsearch/data'
+        - name: data
+          hostPath:
+            path: '{{ .Values.userspace.appData }}/elasticsearch/master'
+            type: DirectoryOrCreate

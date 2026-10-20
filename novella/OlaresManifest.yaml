@@ -1,0 +1,92 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  novella: 1
+metadata:
+  name: novella
+  description: Notion-style WYSIWYG editor with AI-powered autocompletion
+  icon: https://app.cdn.olares.com/appstore/novel/icon.png
+  appid: novella
+  version: "1.0.14"
+  title: Novel
+  categories:
+    - Productivity_v112
+
+permission:
+  appData: true
+  appCache: true
+spec:
+  versionName: "1.0.2"
+  featuredImage: https://app.cdn.olares.com/appstore/novel/promote_image_1.webp
+  promoteImage:
+    - https://app.cdn.olares.com/appstore/novel/promote_image_1.webp
+    - https://app.cdn.olares.com/appstore/novel/promote_image_2.webp
+  fullDescription: |
+    Novel is a web-based open-source WYSIWYG (What You See Is What You Get) editor inspired by Notion, offering AI-powered autocompletions.
+
+    It is particularly useful for those who write long-form content, such as essays or reports, and helps them maintain a consistent tone and style throughout their writing.
+
+    **Key Features:**
+    - WYSIWYG Editing: Offers a user-friendly editing experience where users can see how the content will appear in real-time.
+
+    - AI Autocompletions:
+    Employs AI-powered autocompletions to suggest relevant words, phrases, and sentences as users type.
+
+    - Open-Source:
+    Allows developers to contribute, customize, and extend the tool's functionality as per their requirements.
+
+  upgradeDescription: |
+    Wire AI credentials from Olares global settings (Settings → Integration → OpenAI / Custom OpenAI) into container env vars instead of a mounted /src/.env file.
+
+    OPENAI_API_KEY prefers OLARES_USER_CUSTOM_OPENAI_APIKEY when set, otherwise OLARES_USER_OPENAI_APIKEY. OPENAI_BASE_URL comes from OLARES_USER_CUSTOM_OPENAI_SERVICE (leave empty for OpenAI official default).
+
+  developer: Steven Tey
+  website: https://novel.sh/
+  sourceCode: https://github.com/steven-tey/novel
+  submitter: Olares
+  locale:
+    - en-US
+    - zh-CN
+  doc: https://github.com/steven-tey/novel
+  license:
+    - text: Apache-2.0
+      url: https://github.com/steven-tey/novel#Apache-2.0-1-ov-file
+  requiredMemory: 1Gi
+  limitedMemory: 4Gi
+  requiredDisk: 1Gi
+  limitedDisk: 1Gi
+  requiredCpu: 0.2
+  limitedCpu: 1
+  supportArch:
+    - amd64
+entrances:
+  - name: novella
+    host: novella
+    port: 3000
+    title: Novel
+    icon: https://app.cdn.olares.com/appstore/novel/icon.png
+    authLevel: private
+options:
+  apiTimeout: 0
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+envs:
+  - envName: OPENAI_API_KEY
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_OPENAI_APIKEY
+  - envName: OPENAI_BASE_URL
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_CUSTOM_OPENAI_SERVICE
+  - envName: CUSTOM_OPENAI_API_KEY
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_CUSTOM_OPENAI_APIKEY

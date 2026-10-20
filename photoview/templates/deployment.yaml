@@ -1,0 +1,120 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: photoview
+spec:
+  replicas: {{ .Values.workloads.photoview.replicaCount }}
+  selector:
+    matchLabels:
+      app: photoview
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: photoview
+    spec:
+      initContainers:
+      - name: init-chmod-data
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        command:
+          - sh
+          - "-c"
+          - |
+            chown -R 1000:1000 /cache
+        resources: {}
+        volumeMounts:
+        - name: cache
+          mountPath: /cache
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+      containers:
+      - name: photoview
+        image: "docker.io/beclab/aboveos-viktorstrate-photoview:2"
+        resources:
+          requests:
+            cpu: 150m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 2048Mi
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PHOTOVIEW_DATABASE_DRIVER
+          value: mysql
+        - name: PHOTOVIEW_LISTEN_IP
+          value: 0.0.0.0
+        - name: PHOTOVIEW_LISTEN_PORT
+          value: "8080"
+        - name: PHOTOVIEW_MEDIA_CACHE
+          value: /cache
+        - name: PHOTOVIEW_MYSQL_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-secrets
+              key: PHOTOVIEW_MYSQL_URL
+        volumeMounts:
+        - name: cache
+          mountPath: /cache
+        - name: photos
+          mountPath: /photos
+          readOnly: true
+        - name: user-data
+          mountPath: /data
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      volumes:
+      - name: cache
+        hostPath:
+          type: DirectoryOrCreate
+          {{- if .Values.sysVersion }}
+            {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+          path: {{ .Values.userspace.appData}}/cache
+            {{- else }}
+          path: {{ .Values.userspace.appData}}/photoview
+            {{- end }}
+          {{- else }}
+          path: {{ .Values.userspace.appData}}/photoview
+          {{- end }}
+      - name: photos
+        hostPath:
+          type: DirectoryOrCreate
+          {{- if .Values.sysVersion }}
+            {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+          path: {{ .Values.userspace.appData}}/photos
+            {{- else }}
+          path: {{ .Values.userspace.appData}}/photoview/photos
+            {{- end }}
+          {{- else }}
+          path: {{ .Values.userspace.appData}}/photoview/photos
+          {{- end }}
+      - name: user-data
+        hostPath:
+          type: Directory
+          path: {{ .Values.userspace.userData }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+    - name: phtoviewtcp
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+      

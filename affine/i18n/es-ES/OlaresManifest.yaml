@@ -1,0 +1,22 @@
+metadata:
+  title: AFFiNE
+  description: Alternativa de código abierto a Notion, Miro y Airtable
+spec:
+  fullDescription: |
+    AFFiNE es un espacio de trabajo todo en uno de código abierto y un sistema operativo para todos los bloques de construcción que componen tu base de conocimiento y mucho más: wiki, gestión del conocimiento, presentación y activos digitales.
+    Es una mejor alternativa a Notion y Miro.
+    
+    **Funciones**
+    Un verdadero lienzo para bloques de cualquier forma. Docs y pizarra ahora están completamente fusionados.
+    - Muchas apps de edición dicen ser un lienzo de productividad, pero AFFiNE es una de las pocas que te permite poner cualquier bloque de construcción en un lienzo sin bordes: texto enriquecido, notas adhesivas, páginas web incrustadas, bases de datos multivista, páginas enlazadas, formas e incluso diapositivas. Lo tenemos todo.
+    
+    Socio de IA multimodal listo para cualquier trabajo
+    - ¿Redactar un informe profesional? ¿Convertir un esquema en diapositivas expresivas y presentables? ¿Resumir un artículo en un mapa mental bien estructurado? ¿Ordenar tu plan de trabajo y backlog de tareas? ¿O... dibujar y programar prototipos de apps y páginas web directamente con un solo prompt? Contigo, AFFiNE AI lleva tu creatividad al límite de tu imaginación.
+    
+    Local-first y colaboración en tiempo real
+    - Nos encanta la idea de local-first: siempre posees tus datos en tu disco, a pesar de la nube. Además, AFFiNE admite sincronización en tiempo real y colaboraciones en web y clientes multiplataforma.
+    - Nota: la colaboración multiusuario aún no está soportada en AFFiNE autoalojado.
+  upgradeDescription: |
+    Actualiza AFFiNE de 0.27.2 a 0.27.4. Corrige el consumo de memoria de la recolección de basura del servidor, mejora la estabilidad de las grabaciones y corrige problemas del diario y los bloques de código. Puede ser necesario reconfigurar BYOK tras la actualización.
+
+    https://github.com/toeverything/AFFiNE/releases/tag/v0.27.4

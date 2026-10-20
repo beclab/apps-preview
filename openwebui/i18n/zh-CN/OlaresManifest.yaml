@@ -1,0 +1,36 @@
+metadata:
+  title: Open WebUI
+  description: 面向 LLMs 的友好网页界面
+spec:
+  fullDescription: |
+    Open WebUI（前身为 Ollama WebUI）是一个可扩展、功能丰富且用户友好的自托管网页界面，支持完全离线运行。它支持多种 LLM 运行器，包括 Ollama 和兼容 OpenAI 的 API。欲了解更多信息，请务必查看我们的 Open WebUI 文档。
+
+    **Open WebUI 的主要特性**
+    - **Ollama/OpenAI API 集成**：轻松集成兼容 OpenAI 的 API，与 Ollama 模型一起展开精妙对话。自定义 OpenAI API URL，以连接 LMStudio、GroqCloud、Mistral、OpenRouter 等。
+    - **Pipelines 和插件支持**：使用 Pipelines 插件框架，将自定义逻辑和 Python 库无缝集成到 Open WebUI 中。可进行函数调用、访问频率限制、Langfuse 监控、LibreTranslate 翻译、有害信息过滤等。
+    - **响应式设计**：在台式电脑、笔记本电脑和移动设备上享受无缝体验。
+    - **移动端 PWA**：通过渐进式 Web 应用 (PWA) 在移动设备上离线访问，体验流畅。
+    - **Markdown 与 LaTeX 支持**：提升内容呈现的丰富度。
+    - **语音/视频通话**：集成免提语音和视频通话功能。
+    - **模型构建器**：通过 Web 界面轻松创建 Ollama 模型，支持自定义角色/代理。
+    - **Python 函数调用工具**：在工具工作区中使用内置编辑器添加 Python 函数，与 LLM 无缝集成。
+    - **本地 RAG 集成**：支持文档交互式聊天，使用 # 命令直接访问文档或库。
+    - **RAG 网络搜索**：支持 SearXNG、Google PSE、Brave Search、DuckDuckGo、TavilySearch 等。
+    - **网页浏览功能**：通过 # 命令后跟 URL 将网页内容融入对话。
+    - **图像生成集成**：支持 AUTOMATIC1111、ComfyUI、本地或外部 DALL-E API。
+    - **多模型对话**：可并行与多个模型交互，结合各自优势。
+    - **RBAC 权限控制**：仅授权用户可访问和管理模型。
+    - **多语言支持**：支持多语言国际化（i18n）。
+    - **持续更新**：通过定期更新和社区贡献持续改进。
+
+  upgradeDescription: |
+    Chart **1.0.47** — Open WebUI **v0.12.0**.
+    - 新增实时语音通话与动态 3D 形象，需配置 OpenAI Realtime 服务。
+    - 支持验证器应用双因素登录及恢复码。
+    - 共享聊天可允许其他成员回复，显示消息作者和实时输入状态。
+    - 技能支持多文件和 URL 导入；技能、模型、工具和函数支持版本历史。
+    - 知识库新增文件浏览视图，可预览原文件并编辑提取的文本。
+    - 新增自定义模型控件、嵌套用户组及按组设置默认模型。
+    - 实验性 Tool Search 可按需加载工具定义，需使用原生函数调用。
+    - 修复安全、访问控制和稳定性问题。
+    - https://github.com/open-webui/open-webui/releases/tag/v0.12.0

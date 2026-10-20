@@ -1,0 +1,67 @@
+metadata:
+  description: "通用 SGLang 引擎基座。在安装时通过环境变量选择任意 HuggingFace Safetensors 模型。"
+  title: SGLang 引擎基座
+
+spec:
+  upgradeDescription: |
+    将 SGLang 从 v0.5.18-cu130 升级至 v0.5.21-cu130。Chart 1.2.33。
+
+    **更新内容**（v0.5.18 → v0.5.21）
+
+    v0.5.21
+    - 新增模型支持：DeepSeek-V4.1 Flash、GigaChat 3.5、IQuest-Q1、MiMo-V2.6 / V2.6-Pro、Ling-3.0-flash-VL，以及 DiffusionGemma、Qwen-Image 2.1、Anima Base v1.0、Ming-Image 0.1、FLUX 3 Action 等扩散模型
+    - 前缀缓存默认改用 Rust 内核实现，不支持的配置会自动回退到 Python 实现（可用 `SGLANG_UNIFIED_RADIX_TREE_CORE_BACKEND=python` 强制旧实现）
+    - 新增 Decisions API（`/v1/decisions`），可将 LLM/VLM 用作低延迟分类与打分器；Score API（`/v1/score`）支持一次请求对所有候选项打分
+    - DeepSeek-V4.1 长提示词首 token 速度提升 22%，Kimi K3 在 PD 部署下 prefill 吞吐提升 20.6%
+    - 破坏性变更：除非启动时带 `--trust-request-chat-template`，否则拒绝请求自带的 `chat_template`；移除已废弃端点（`/model_info` 取代 `/get_weight_version`，`/v1/loads` 取代 `/get_load`）；`--kv-cache-dtype fp4_e2m1` 改名为 `fp4_mx_block16`；出于数值精度考虑，FlashInfer MoE fused finalize 默认关闭；移除旧的 radix cache 实现
+
+    v0.5.20
+    - 新增模型支持：GLM-5.3-Flash、Hy4-Preview、Qwen3.8-Flash-Next、K2 Horizon、Nanbeige4.2 及多个扩散模型
+    - 统一 radix tree 支持 SWA 分叉点缓存：DeepSeek-V4-Flash 共享系统提示词场景下，token 命中率从 43.8% 提升到 60.8%，平均 TTFT 从 1.57 秒降至 1.07 秒
+    - `return_sampling_mask` 可返回每个解码步的精确候选集合，用于 RL rollout 回放，容量由 `--sampling-mask-max-tokens` 控制（默认 4096）
+    - Blackwell 上的 DeepSeek-V4：TRT-LLM attention 覆盖 SM100/SM103 的 CSA 与 HCA 层（相比 FlashMLA 约 1.2 倍 prefill、1.45 倍 decode）
+    - 32 GB 显卡上 decode CUDA Graph 上限从 24 提升到 48（TP >= 4 时为 160），chunked prefill 从 2K 提升到 4K
+    - 破坏性变更：CUDA 12 产线下线（本 Chart 已使用 CUDA 13 镜像）；`/v1/responses` 的结果存储需显式 `--enable-response-store`；移除 prefill 上下文并行 v1；移除 17 个已废弃命令行参数；删除 `cutlass_mla` attention 后端、非 Marlin 的 `gptq` 路径和 Dual Chunk Flash Attention；SWA 内存池过小时改为启动即报错，不再在预热阶段卡住
+
+    v0.5.19
+    - 新增模型支持：Qwen3.8（2.4T-A95B）、Qwen3.8-27B、dots3.note、Ling-3.0-flash 与 Ling-3.0-tiny、Spark2.5、MiniCPM-SALA、Granite 4.2
+    - 支持 beam search，通过 `beam_width` 使用；暂不能与投机解码、PD 分离、DP attention、HiCache 同时使用
+    - `--enable-layernorm-sp` 让 Qwen3-8B 的 prefill 在 H100 上快 3.5%、B200 上快 5.6%，TP 规模越大收益越明显
+    - 可通过 `--moe-a2a-backend deepep_v2` 使用 DeepEP v2 ElasticBuffer，跨节点场景下 decode 仍可运行在 CUDA Graph 中
+    - 破坏性变更：统一 radix tree 成为所有配置的默认缓存；要求 FlashInfer 0.6.18；Spark 2.5 的 tool-call parser 由 `spark` 改名为 `spark25`；单个请求最多 32 个 stop 字符串和 32 条 stop 正则，且每条不超过 256 字节
+
+    详细发布说明请访问：
+    https://github.com/sgl-project/sglang/releases
+  fullDescription: |
+    **重要提示**  
+    此应用是一个模板，不能单独使用。请按下方环境变量设置模型后，方可使用本应用提供模型服务。
+
+    **环境变量设置指南**
+    - `MODEL_SOURCE`：`hf://<仓库>`。HuggingFace 模型下载源，例如 `hf://openai/gpt-oss-20b`。请选择包含 `.safetensors` 权重文件的仓库。可选追加 `--include <文件>` 或 `--revision <sha>`。
+    - `MODEL_NAME`：`owner/repo`。模型名称，取 `MODEL_SOURCE` 中 `hf://` 之后的字符串，例如 `openai/gpt-oss-20b`。此项也作为 OpenAI 别名和 SGLang `--model-path` 参数。
+    - `MODEL_MODE`：`chat` 或 `embedding`。对话模型选 `chat`；向量模型选 embedding 时，图表会自动添加 `--is-embedding`。
+    - `MODEL_SUPPORTS`：模型能力选项（Vision / Tools / Thinking / None）。请选择您的模型支持的功能。
+    - `ENGINE_ARGS`：`--context-length 65536 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser gpt-oss --tool-call-parser gpt-oss`。SGLang 额外 CLI 参数，多个 `--key value` 之间用空格分隔。请根据模型系列调整 `--reasoning-parser` 和 `--tool-call-parser`。详见 https://docs.sglang.io/docs/advanced_features/server_arguments。
+    - `LOG_LEVEL`：`debug`、`info`、`warn` 或 `error`。llm-init 容器的日志等级。
+    - `SGLANG_REQUIRED_GPU_MEMORY`：`8Gi`、`8192` 或 `8192Mi`。模型所需显存。NVIDIA 下设置 `nvidia.com/gpumem`（MiB），Spark 下设置 pod 显存。
+
+    **工作流程说明**
+    首先，`llm-init` 下载并准备模型，然后 SGLang 在模型准备好后启动服务。两个部分运行在不同 Deployment 中，但通过 App Common 存储共享 HF 缓存与运行状态。
+
+    **技术栈说明**
+    - **SGLang**（30000 端口）：运行模型并通过 API 提供服务
+    - **llm-init**（8090 端口）：下载模型、展示进度，并通过 OpenAI API 代理到 SGLang
+
+    **加速器模式**
+    | 模式           | 设备             | 说明                                                         |
+    |----------------|------------------|--------------------------------------------------------------|
+    | `nvidia`       | GPU (CUDA)       | 需设置 `SGLANG_REQUIRED_GPU_MEMORY`；可在 ENGINE_ARGS 中调整 `--mem-fraction-static` |
+    | `nvidia-gb10`  | GPU (Spark)      | 类似上方，但显存由 pod 管理                                  |
+
+    **模型存储**
+    所有模型文件存储在共享目录 `appCommon/huggingface`（挂载为 `/cache/hf/hub`），同类应用均使用此目录。
+
+    **资源建议**
+    - CPU、内存和 GPU 数量随图表自动配置，磁盘配额为固定
+    - SGLang 加载大模型可能需要数分钟，请保持应用 Running 直至就绪
+    - SGLang 在前缀缓存与结构化输出（JSON、工具调用、Agent）方面表现优异，默认开启前缀缓存

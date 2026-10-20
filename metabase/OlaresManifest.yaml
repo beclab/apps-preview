@@ -1,0 +1,142 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  metabase: 1
+metadata:
+  name: metabase
+  description: Business Intelligence and Embedded Analytics tool that lets everyone work with data
+  icon: https://app.cdn.olares.com/appstore/metabase/icon.png
+  appid: metabase
+  version: "1.0.21"
+  title: Metabase
+  categories:
+  - Developer Tools
+  - workspace
+  - developer
+  tags:
+  - data
+  - low-code
+
+permission:
+  appData: true
+  appCache: true
+  userData:
+    - Home
+spec:
+  versionName: "0.63.16.6"
+  upgradeDescription: |
+    Upgrade Metabase from 0.53 to 0.63.16.6 (`metabase/metabase:v0.63.16.6`).
+
+    This jump includes the 0.54–0.63 series: dashboards, embedding, visualizations, and many query/admin fixes. Review breaking changes if you use embedding or the API.
+
+    Release notes: https://github.com/metabase/metabase/releases/tag/v0.63.16.6
+
+  featuredImage: https://app.cdn.olares.com/appstore/metabase/1.jpg
+  promoteImage:
+    - https://app.cdn.olares.com/appstore/metabase/1.jpg
+    - https://app.cdn.olares.com/appstore/metabase/2.jpg
+    - https://app.cdn.olares.com/appstore/metabase/3.jpg
+    - https://app.cdn.olares.com/appstore/metabase/4.jpg
+  fullDescription: |
+    Metabase is the easy, open-source way for everyone in your company to ask questions and learn from data.
+
+    Features
+    Set up in five minutes (we're not kidding).
+    Let anyone on your team ask questions without knowing SQL.
+    Use the SQL editor for more complex queries.
+    Build handsome, interactive dashboards with filters, auto-refresh, fullscreen, and custom click behavior.
+    Create models that clean up, annotate, and/or combine raw tables.
+    Define canonical segments and metrics for your team to use.
+    Send data to Slack or email on a schedule with dashboard subscriptions.
+    Set up alerts to have Metabase notify you when your data changes.
+    Embed charts and dashboards in your app, or even your entire Metabase.
+
+  developer: Metabase
+  website: https://www.metabase.com/
+  sourceCode: https://github.com/metabase/metabase
+  submitter: Olares
+  doc: https://www.metabase.com/docs
+  license:
+    - text: AGPL-3.0
+      url: https://github.com/metabase/metabase?tab=AGPL-3.0-2-ov-file
+  locale:
+    - en-US
+    - zh-CN
+    - de-DE
+    - es-ES
+    - it-IT
+    - fr-FR
+    - ja-JP
+  requiredMemory: 500Mi
+  limitedMemory: 4Gi
+  requiredDisk: 256Mi
+  limitedDisk: 5Gi
+  requiredCpu: 1
+  limitedCpu: 2
+  supportArch:
+    - amd64
+    - arm64
+options:
+  allowedOutboundPorts:
+    - 465
+    - 587
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+  policies:
+    - uriRegex: ^/(setup)(/.*)?(\?.*)?$
+      level: system
+      oneTime: false
+      validDuration: 3600s
+      entranceName: metabase
+entrances:
+  - name: metabase
+    port: 3000
+    host: metabase
+    title: Metabase
+    icon: https://app.cdn.olares.com/appstore/metabase/icon.png
+    openMethod: window
+middleware:
+  postgres:
+    username: metabase
+    databases:
+      - name: metabase
+envs:
+  - envName: MB_EMAIL_SMTP_HOST
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_SERVER
+  - envName: MB_EMAIL_SMTP_PORT
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_PORT
+  - envName: MB_EMAIL_SMTP_USERNAME
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_USERNAME
+  - envName: MB_EMAIL_SMTP_PASSWORD
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_PASSWORD
+  - envName: MB_EMAIL_SMTP_SECURITY
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_SECURITY_PROTOCOLS
+  - envName: MB_EMAIL_FROM_ADDRESS
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_FROM_ADDRESS
+  - envName: MB_EMAIL_FROM_NAME
+    required: false
+    applyOnChange: true
+    editable: true
+    default: "Metabase"

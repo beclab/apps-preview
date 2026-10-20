@@ -1,0 +1,177 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  litellm: 1
+  litellmingress: 1
+metadata:
+  name: litellm
+  icon: https://app.cdn.olares.com/appstore/litellm/icon.png
+  description: Call 100+ LLMs in OpenAI format
+  appid: litellm
+  title: LiteLLM
+  version: "1.0.22"
+  categories:
+  - Utilities_v112
+  - models
+  tags:
+  - gateway
+
+spec:
+  versionName: "1.103.0"
+  featuredImage: https://app.cdn.olares.com/appstore/litellm/1.webp
+  promoteImage:
+    - https://app.cdn.olares.com/appstore/litellm/1.webp
+    - https://app.cdn.olares.com/appstore/litellm/2.webp
+    - https://app.cdn.olares.com/appstore/litellm/3.webp
+  fullDescription: |
+    LiteLLM is a Python SDK and Proxy Server (AI Gateway) to call 100+ LLM APIs in OpenAI (or native) format, with cost tracking, guardrails, loadbalancing and logging.
+
+    **Features**
+    - Unified API: Call 100+ LLM APIs (OpenAI, Anthropic, Azure, Bedrock, VertexAI, etc.) in OpenAI format
+    - Cost Tracking: Track costs across all providers
+    - Load Balancing: Distribute requests across multiple models/endpoints
+    - Guardrails: Content filtering and safety checks
+    - Logging & Observability: Comprehensive logging and monitoring
+    - Rate Limiting: Built-in rate limiting and throttling
+    - Proxy Server: Deploy as an AI Gateway/Proxy server
+    - Multi-tenant: Support for multiple users and teams
+
+  upgradeDescription: |
+    Chart 1.0.22 upgrades LiteLLM Proxy from v1.83.3-stable to v1.103.0.
+    Image: docker.io/beclab/berriai-litellm:v1.103.0. The same digest is published as the main-stable tag.
+
+    The master key, admin UI credentials, PostgreSQL wiring, and proxy config stay as they are. LiteLLM applies Prisma migrations on startup. When public._prisma_migrations already exists, an init container writes a PostgreSQL custom-format dump to appData/backups/chart-1.0.22/litellm.dump first. Later starts and a database without that table skip the dump.
+
+    Release notes: https://github.com/BerriAI/litellm/releases/tag/v1.103.0
+  developer: BerriAI
+  website: https://www.litellm.ai
+  sourceCode: https://github.com/BerriAI/litellm
+  submitter: Olares
+  locale:
+    - en-US
+    - zh-CN
+    - de-DE
+    - es-ES
+    - it-IT
+    - fr-FR
+    - ja-JP
+  doc: https://docs.litellm.ai
+  license:
+    - text: MIT
+      url: https://github.com/BerriAI/litellm/blob/main/LICENSE
+  limitedCpu: 4.5
+  requiredCpu: 200m
+  requiredDisk: 1Gi
+  limitedDisk: 500Gi
+  limitedMemory: 4.5Gi
+  requiredMemory: 576Mi
+  supportArch:
+    - amd64
+    - arm64
+permission:
+  appData: true
+  appCache: true
+options:
+  apiTimeout: 0
+  dependencies:
+    - name: olares
+      version: '>=1.12.6-0'
+      type: system
+entrances:
+  - name: litellmui
+    host: litellmingress
+    port: 8080
+    title: LiteLLM
+    icon: https://app.cdn.olares.com/appstore/litellm/icon.png
+    authLevel: private
+    openMethod: window
+  - name: litellmapi
+    host: litellm-svc
+    icon: https://app.cdn.olares.com/appstore/litellm/icon.png
+    openMethod: window
+    port: 80
+    title: LiteLLM API
+    authLevel: internal
+    invisible: true
+middleware:
+  postgres:
+    username: litellm
+    password: litellm
+    databases:
+      - name: litellm
+        distributed: false
+envs:
+  - envName: LITELLM_MASTER_KEY
+    required: false
+    type: password
+    editable: true
+    applyOnChange: true
+    regex: '^sk-[A-Za-z0-9]+$'
+    description: "Master API key (must start with sk-, followed by letters and numbers)"
+    default: "sk-1234"
+  - envName: UI_USERNAME
+    required: true
+    type: string
+    editable: true
+    applyOnChange: true
+    regex: '^[\w\-!@#$%^&*()+={}\[\]:,.?~]{1,}$'
+    description: "Username for admin UI"
+  - envName: UI_PASSWORD
+    required: true
+    type: password
+    editable: true
+    applyOnChange: true
+    regex: '^[\w\-!@#$%^&*()+={}\[\]:,.?~]{6,}$'
+    description: "Password for admin UI (must be at least 6 characters)"
+  - envName: LITELLM_DROP_PARAMS
+    required: false
+    applyOnChange: true
+    editable: true
+    type: bool
+    default: "true"
+    description: "Drop the unsupported parameter instead of raising an exception"
+  - envName: USE_SYSTEM_SMTP_SETTINGS
+    required: false
+    applyOnChange: true
+    editable: true
+    type: bool
+    default: "true"
+    description: "Use system SMTP settings (when enabled, SMTP envs are managed by system envs"
+  - envName: SMTP_ENABLED
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_ENABLED
+  - envName: SMTP_HOST
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_SERVER
+  - envName: SMTP_PORT
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_PORT
+  - envName: SMTP_SENDER_EMAIL
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_FROM_ADDRESS
+  - envName: SMTP_TLS
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_USE_TLS
+  - envName: SMTP_USERNAME
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_USERNAME
+  - envName: SMTP_PASSWORD
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_PASSWORD
+

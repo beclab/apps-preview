@@ -1,0 +1,188 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  hoppscotch: 1
+metadata:
+  name: hoppscotch
+  description: Open source API development ecosystem.
+  icon: https://app.cdn.olares.com/appstore/hoppscotch/icon.png
+  appid: hoppscotch
+  version: '1.0.21'
+  title: Hoppscotch
+  categories:
+  - Developer Tools
+  - workspace
+  - developer
+  tags:
+  - testing
+  - utilities
+
+permission:
+  appData: true
+  appCache: true
+  userData:
+    - Home
+
+spec:
+  versionName: '2026.8.0'
+  featuredImage: https://app.cdn.olares.com/appstore/hoppscotch/1.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/hoppscotch/1.webp
+  - https://app.cdn.olares.com/appstore/hoppscotch/2.webp
+  - https://app.cdn.olares.com/appstore/hoppscotch/3.webp
+  - https://app.cdn.olares.com/appstore/hoppscotch/4.webp
+  fullDescription: |
+    Hoppscotch is a open-source alternative to Postman, Insomnia
+
+    **Features**
+
+    **Lightweight:** Crafted with minimalistic UI design.
+    **Fast:** Send requests and get responses in real time.
+    **HTTP Methods:** Request methods define the type of action you are requesting to be performed.
+    **Theming:** Customizable combinations for background, foreground, and accent colors — customize now.
+    **PWA:** Install as a Progressive Web App on your device.
+    **Request:** Retrieve response from endpoint instantly.  
+    **WebSocket:** Establish full-duplex communication channels over a single TCP connection.
+    **Server-Sent Events:** Receive a stream of updates from a server over an HTTP connection without resorting to polling.
+    **Socket.IO:** Send and Receive data with the SocketIO server.
+    **MQTT:** Subscribe and Publish to topics of an MQTT Broker.
+    **GraphQL:** GraphQL is a query language for APIs and a runtime for fulfilling those queries with your existing data.
+    **Authorization:** Allows to identify the end-user.
+    **Headers:** Describes the format the body of your request is being sent in.    
+    **Parameters:** Use request parameters to set varying parts in simulated requests.
+    **Request Body:** Used to send and receive data via the REST API.
+    **Response:** Contains the status line, headers, and the message/response body.
+    **History:** Request entries are synced with your cloud/local session storage.
+    **Collections:** Keep your API requests organized with collections and folders. Reuse them with a single click.
+    **Pre-Request Scripts:** Snippets of code associated with a request that is executed before the request is sent.
+    **Teams:** Helps you collaborate across your teams to design, develop, and test APIs faster.
+    **Workspaces:** Organize your personal and team collections environments into workspaces. Easily switch between workspaces to manage multiple projects.
+    **Keyboard Shortcuts:** Optimized for efficiency.
+    **Proxy:** Enable Proxy Mode from Settings to access blocked APIs.
+    **i18n:** Experience the app in your language.
+    **Auth + Sync:** Sign in and sync your data in real-time across all your devices.
+    **Synchronize your data:** Handoff to continue tasks on your other devices.
+    **Post-Request Tests:** Write tests associated with a request that is executed after the request's response.
+    **Environments:** Environment variables allow you to store and reuse values in your requests and scripts.
+    **Bulk Edit:** Edit key-value pairs in bulk.
+    **Admin dashboard:** Manage your team and invite members.
+    **Add-ons:** Official add-ons for hoppscotch.
+
+  upgradeDescription: |
+    Upstream release: [Hoppscotch 2026.8.0](https://github.com/hoppscotch/hoppscotch/releases/tag/2026.8.0)
+
+    **What's changed**
+
+    - REST and GraphQL requests share one workspace.
+    - Collection runs can iterate rows from a CSV or JSON data file.
+    - The Hoppscotch MCP server can work with collections, requests, and environments.
+
+    **Fixes**
+
+    - Request documentation is kept when you save.
+    - Host-only cookies stay on the host that set them.
+    - Cookie capture still works when the Agent only returns `Set-Cookie`.
+    - This release includes a dependency security patch.
+
+  developer: Hoppscotch, Inc
+  website: https://hoppscotch.io
+  sourceCode: https://github.com/hoppscotch/hoppscotch
+  submitter: Olares
+  locale:
+    - en-US
+    - zh-CN
+    - de-DE
+    - es-ES
+    - it-IT
+    - fr-FR
+    - ja-JP
+  requiredMemory: 500Mi
+  limitedMemory: 2Gi
+  requiredDisk: 128Mi
+  limitedDisk: 256Mi
+  requiredCpu: 1
+  limitedCpu: 3
+  doc: https://docs.hoppscotch.io/
+  license:
+  - text: MIT
+    url: https://github.com/hoppscotch/hoppscotch/tree/main?tab=MIT-1-ov-file#readme
+  supportArch:
+    - amd64
+    - arm64
+  runAsUser: true
+options:
+  allowedOutboundPorts:
+    - 465
+    - 587
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+entrances:
+- authLevel: internal
+  host: hoppscotch-svc
+  icon: https://app.cdn.olares.com/appstore/hoppscotch/icon.png
+  name: hoppscotch
+  openMethod: window
+  port: 80
+  title: Hoppscotch
+
+middleware:
+  postgres:
+    username: hoppscotch
+    databases:
+      - name: hoppscotch
+
+envs:
+  - envName: MAILER_SMTP_ENABLE
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_ENABLED
+  - envName: MAILER_USE_CUSTOM_CONFIGS
+    type: bool
+    required: false
+    editable: true
+    default: "true"
+  - envName: MAILER_ADDRESS_FROM
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_FROM_ADDRESS
+  - envName: MAILER_SMTP_URL
+    type: string
+    required: false
+    editable: true
+    default: "smtps://test@domain.com:pass@smtp.domain.com"
+  - envName: MAILER_SMTP_HOST
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_SERVER
+  - envName: MAILER_SMTP_PORT
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_PORT
+  - envName: MAILER_SMTP_SECURE
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_SECURE
+  - envName: MAILER_SMTP_USER
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_USERNAME
+  - envName: MAILER_SMTP_PASSWORD
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_PASSWORD
+  - envName: MAILER_TLS_REJECT_UNAUTHORIZED
+    type: bool
+    required: false
+    editable: true
+    default: "false"

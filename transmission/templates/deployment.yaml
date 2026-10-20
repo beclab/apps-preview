@@ -1,0 +1,130 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: transmission
+spec:
+  replicas: {{ .Values.workloads.transmission.replicaCount }}
+  selector:
+    matchLabels:
+      app: transmission
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: transmission
+    spec:
+      initContainers:
+      - name: init-transmission
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        command:
+          - sh
+          - '-c'
+          - |
+            sh /chart-init/init.sh
+        resources: {}
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: home-downloads
+          mountPath: /olares/userdata/home
+        - name: transmission-data
+          mountPath: /appdata-root
+        - name: transmission-init
+          mountPath: /chart-init
+          readOnly: true
+        - name: transmission-defaults
+          mountPath: /chart-defaults
+          readOnly: true
+        securityContext:
+          runAsUser: 0
+      containers:
+      - name: transmission
+        env:
+        - name: PGID
+          value: "1000"
+        - name: PUID
+          value: "1000"
+        - name: TZ
+          value: UTC
+        image: "linuxserver/transmission:4.1.2"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        ports:
+        - containerPort: 9091
+          protocol: TCP
+        - containerPort: 51413
+          protocol: TCP
+        - containerPort: 51413
+          protocol: UDP
+        volumeMounts:
+        - mountPath: /config
+          name: transmission-data
+          subPath: config
+        - mountPath: /watch
+          name: transmission-data
+          subPath: watch
+        - mountPath: /olares/userdata/home
+          name: home-downloads
+        - mountPath: /olares/userdata/external
+          name: external-downloads
+        - mountPath: /downloads
+          name: home-downloads
+          subPath: Downloads
+      volumes:
+      - name: transmission-data
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.appData }}
+      - name: home-downloads
+        hostPath:
+          type: DirectoryOrCreate
+          path: {{ .Values.userspace.userData }}
+      - name: external-downloads
+        hostPath:
+          type: DirectoryOrCreate
+          path: "{{ .Values.sharedlib }}"
+      - name: transmission-init
+        configMap:
+          name: transmission-init
+          defaultMode: 438
+          items:
+          - key: init.sh
+            path: init.sh
+      - name: transmission-defaults
+        configMap:
+          name: transmission-defaults
+          defaultMode: 438
+          items:
+          - key: settings.json
+            path: settings.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Release.Name }}
+  ports:
+    - name: webui-port
+      port: 9091
+      targetPort: 9091
+      protocol: TCP
+    - name: torrent-port
+      port: 51413
+      targetPort: 51413
+      protocol: TCP
+    - name: torrent-udp-port
+      port: 51413
+      protocol: UDP
+      targetPort: 51413

@@ -1,0 +1,442 @@
+﻿{{- $image := "docker.io/beclab/steam-headless:v0.1.21" -}}
+{{- $oe := .Values.olaresEnv | default dict -}}
+{{- $mode := lower (toString (index $oe "RUNNING_MODE")) -}}
+{{- if not (or (eq $mode "primary") (eq $mode "secondary")) -}}
+{{- $mode = "primary" -}}
+{{- end -}}
+{{- $olares_desktop := (lookup "v1" "ConfigMap" "os-framework" "olares-desktop-config") -}}
+{{- if and $olares_desktop $olares_desktop.data }}
+{{- $enabled := index $olares_desktop.data "enabled" | default "false" -}}
+{{- if eq (lower $enabled) "true" -}}
+{{- $mode = "secondary" -}}
+{{- end -}}
+{{- end -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-steam-headless.yml
+    kompose.version: 1.34.0 (HEAD)
+    applications.app.bytetrade.io/gpu-inject: "true"    
+  labels:
+    io.kompose.service: steam-headless
+  name: steamheadless
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.steamheadless.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: steam-headless
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-steam-headless.yml
+        kompose.version: 1.34.0 (HEAD)
+      labels:
+        io.kompose.service: steam-headless
+        applications.app.bytetrade.io/macvlan-init: "true"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      initContainers:
+        # The session moved from uid 0 to uid 1000, so the durable volumes have
+        # to follow. Guarded by ! -uid 1000 so re-runs cost a stat pass, and a
+        # fresh install (which scaffolds root-owned dirs) self-heals.
+        - name: init-chown-volumes
+          image: {{ $image }}
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - |
+              for d in /chown-home /chown-games; do
+                n=$(find "$d" ! -uid 1000 -printf . 2>/dev/null | wc -c)
+                if [ "$n" -gt 0 ]; then
+                  echo "chown 1000:1000 on $n entries under $d"
+                  find "$d" ! -uid 1000 -exec chown -h 1000:1000 {} +
+                else
+                  echo "$d already uid 1000"
+                fi
+              done
+              rm -rf /chown-home/.Xauthority || true
+              ln -s /run/olares-desktop/xauth/Xauthority /chown-home/.Xauthority
+          volumeMounts:
+            - name: steam-headless-claim0
+              mountPath: /chown-home
+            - name: steam-headless-claim1
+              mountPath: /chown-games
+      containers:
+        - env:
+            - name: NAME
+              value: SteamHeadless
+            - name: TZ
+              value: America/New_York
+            - name: USER_LOCALES
+              value: en_US.UTF-8 UTF-8
+            - name: DISPLAY
+        {{- if eq $mode "primary" }}
+              value: ':55'
+        {{- else }}
+              value: ':0'
+        {{- end }}
+            - name: SHM_SIZE
+              value: 2G
+            - name: DOCKER_RUNTIME
+              value: nvidia
+            - name: PUID
+              value: '1000'
+            - name: PGID
+              value: '1000'
+            - name: UMASK
+              value: '000'
+            - name: USER_PASSWORD
+              value: password
+            - name: MODE
+              value: {{ $mode }}
+            - name: WEB_UI_MODE
+              value: vnc
+            - name: ENABLE_VNC_AUDIO
+              value: 'true'
+            - name: PORT_AUDIO_WEBSOCKET
+              value: "8088"
+            - name: DOMAIN_AUDIO_WEBSOCKET
+              value: {{ .Values.domain.steamheadlessaudio }}
+            - name: PORT_NOVNC_WEB
+              value: '8083'
+            - name: NEKO_NAT1TO1
+            - name: ENABLE_SUNSHINE
+              value: 'true'
+            - name: SUNSHINE_USER
+              value: "{{ .Values.olaresEnv.SUNSHINE_USER }}"
+            - name: SUNSHINE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: SUNSHINE_PASS
+            - name: ENABLE_STEAM
+              value: 'true'
+            - name: ENABLE_EVDEV_INPUTS
+              value: 'true'
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: all
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+        {{- if .Values.deviceName }}
+            - name: DEVICE_NAME
+              value: {{ .Values.deviceName }}
+        {{- end }}  
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: XDG_RUNTIME_DIR
+              value: /run/user/1000              
+          image: {{ $image }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8083
+            initialDelaySeconds: 600
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep x11vnc > /dev/null 2>&1 || exit 1"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep bash > /dev/null 2>&1 || exit 1"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+          - containerPort: 8083
+            protocol: TCP
+          - containerPort: 8088
+            protocol: TCP
+          - containerPort: 47990
+            protocol: TCP
+          - containerPort: 47984
+            protocol: TCP
+          - containerPort: 47989
+            protocol: TCP
+          - containerPort: 48010
+            protocol: TCP
+          - containerPort: 47998
+            protocol: UDP
+          - containerPort: 47999
+            protocol: UDP
+          - containerPort: 48000
+            protocol: UDP
+          - containerPort: 48002
+            protocol: UDP
+          resources:
+            requests:
+              cpu: "4"
+              memory: 4Gi
+            limits:
+              cpu: "18"
+              memory: 64Gi
+          name: steam-headless
+          lifecycle:
+            postStart:
+              exec:  
+                command: 
+                - sh
+                - -c
+                - |
+                  cat /dev/null > /usr/libexec/upowerd
+                  mkdir -p /run/user/1000
+                  chown 1000:1000 /run/user/1000
+                  chmod 700 /run/user/1000
+                  grep -qxF 'XDG_RUNTIME_DIR=/run/user/1000' /etc/environment || \
+                    echo 'XDG_RUNTIME_DIR=/run/user/1000' >> /etc/environment
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+                - SYS_ADMIN
+                - SYS_NICE
+          volumeMounts:
+            - name: steam-headless-claim0
+              mountPath: /home/default
+            - name: steam-headless-claim1
+              mountPath: /mnt/games
+            - name: input-devices
+              mountPath: /dev/input/
+            - name: dshm
+              mountPath: /dev/shm
+        {{- if eq $mode "primary" }}      
+            - name: flatpak-system-app
+              mountPath: /var/lib/flatpak/app
+            - name: flatpak-system-exports
+              mountPath: /var/lib/flatpak/exports
+            - name: flatpak-system-runtime
+              mountPath: /var/lib/flatpak/runtime
+            - name: supervisor-extras
+              mountPath: /etc/supervisor.d/accounts-daemon.ini
+              subPath: accounts-daemon.ini
+            - name: supervisor-extras
+              mountPath: /etc/supervisor.d/polkitd.ini
+              subPath: polkitd.ini
+        {{- end }}
+        {{- if and .Values.deviceName (eq .Values.deviceName "Olares One") }}
+            - name: snd
+              mountPath: /dev/snd
+        {{- end }}
+        {{- if eq $mode "secondary" }}
+            - name: host-dbus
+              readOnly: true
+              mountPath: /run/dbus
+            - name: x11-unix
+              mountPath: /tmp/.X11-unix
+            - name: xauth
+              mountPath: /run/olares-desktop/xauth
+        {{- end }}
+      restartPolicy: Always
+      volumes:
+        - name: steam-headless-claim0
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appCache }}/{{ .Release.Name }}/c0
+        - name: steam-headless-claim1
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appCache }}/{{ .Release.Name }}/c1
+        - name: input-devices
+          hostPath:
+            path: /dev/input/
+            type: ''
+        - name: dshm
+          emptyDir:
+            medium: Memory
+        - name: flatpak-system-app
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appCache }}/{{ .Release.Name }}/flatpak-system/app
+        - name: flatpak-system-exports
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appCache }}/{{ .Release.Name }}/flatpak-system/exports
+        - name: flatpak-system-runtime
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appCache }}/{{ .Release.Name }}/flatpak-system/runtime
+        - name: supervisor-extras
+          configMap:
+            name: steamheadless-supervisor-extras
+    {{- if and .Values.deviceName (eq .Values.deviceName "Olares One") }}
+        - name: snd
+          hostPath:
+            path: /dev/snd
+            type: ''
+    {{- end }}
+    {{- if eq $mode "secondary" }}
+        - name: host-dbus
+          hostPath:
+            path: /run/dbus
+            type: Directory
+        - name: x11-unix
+          hostPath:
+            path: /tmp/.X11-unix
+            type: ''
+        - name: xauth
+          hostPath:
+            path: /run/olares-desktop/xauth
+            type: ''
+    {{- end}}
+      securityContext:
+        runAsUser: 0
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: steamheadless
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    io.kompose.service: steam-headless
+  ports:
+    - name: steamheadless
+      protocol: TCP
+      port: 8083
+      targetPort: 8083
+    - name: tcp2
+      protocol: TCP
+      port: 8088
+      targetPort: 8088
+    - name: tcp3
+      protocol: TCP
+      port: 47990
+      targetPort: 47990
+    - name: tcp4
+      protocol: TCP
+      port: 47984
+      targetPort: 47984
+    - name: tcp5
+      protocol: TCP
+      port: 47989
+      targetPort: 47989
+    - name: tcp6
+      protocol: TCP
+      port: 48010
+      targetPort: 48010
+    - name: udp1
+      protocol: UDP
+      port: 47998
+      targetPort: 47998
+    - name: udp2
+      protocol: UDP
+      port: 47999
+      targetPort: 47999
+    - name: udp3
+      protocol: UDP
+      port: 48000
+      targetPort: 48000
+    - name: udp4
+      protocol: UDP
+      port: 48002
+      targetPort: 48002
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: steamheadlessaudio
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    io.kompose.service: steam-headless
+  ports:
+    - name: steamheadlessaudio
+      protocol: TCP
+      port: 8088
+      targetPort: 8088
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sunshineweb
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    io.kompose.service: steam-headless
+  ports:
+    - name: sunshine
+      protocol: TCP
+      port: 47990
+      targetPort: 47990
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: steamheadless-supervisor-extras
+  namespace: {{ .Release.Namespace }}
+data:
+  polkitd.ini: |
+    [program:polkitd]
+    priority=17
+    autostart=true
+    autorestart=true
+    directory=/
+    user=root
+    command=/usr/lib/polkit-1/polkitd 
+    environment=HOME="/root",USER="root"
+    stopsignal=INT
+    stdout_logfile=/var/log/supervisor/polkitd.log
+    stdout_logfile_maxbytes=10MB
+    stdout_logfile_backups=7
+    stderr_logfile=/var/log/supervisor/polkitd.err.log
+    stderr_logfile_maxbytes=10MB
+    stderr_logfile_backups=7
+
+  accounts-daemon.ini: |
+    [program:accounts-daemon]
+    priority=20
+    autostart=true
+    autorestart=true
+    directory=/
+    user=root
+    command=/usr/libexec/accounts-daemon
+    environment=HOME="/root",USER="root"
+    stopsignal=INT
+    stdout_logfile=/var/log/supervisor/accounts-daemon.log
+    stdout_logfile_maxbytes=10MB
+    stdout_logfile_backups=7
+    stderr_logfile=/var/log/supervisor/accounts-daemon.err.log
+    stderr_logfile_maxbytes=10MB
+    stderr_logfile_backups=7

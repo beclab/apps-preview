@@ -1,0 +1,25 @@
+metadata:
+  title: LibreSpeed
+  description: Free and Open Source Speedtest.
+spec:
+  upgradeDescription: |
+    Fix LibreSpeed v6.2.1 startup by using the official LibreSpeed Docker image mirrored to Docker Hub.
+
+    Restores WEBPORT, run modes, server lists, and PostgreSQL telemetry compatibility. Existing appData and PostgreSQL schema are preserved.
+
+    Release notes: https://github.com/librespeed/speedtest/releases
+  fullDescription: |
+    No Flash, No Java, No Websocket, No Bullshit.
+
+    This is a very lightweight speed test implemented in Javascript, using XMLHttpRequest and Web Workers.    
+    
+    **Features**
+    - Download
+    - Upload
+    - Ping
+    - Jitter
+    - IP Address, ISP, distance from server (optional)
+    - Telemetry (optional)
+    - Results sharing (optional)
+    - Multiple Points of Test (optional)
+    - Connection stability test with latency charting, loss tracking, threshold alerts, and CSV export

@@ -1,0 +1,5 @@
+workloads:
+  cloudreve-redis:
+    replicaCount: 1
+  cloudreve:
+    replicaCount: 1

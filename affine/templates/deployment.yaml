@@ -1,0 +1,190 @@
+{{- $affineDomainENV := split  ","  .Values.domain.affine -}}
+{{- $affineDomain := index $affineDomainENV "_0" -}}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: affine
+  name: affine
+  namespace: '{{ .Release.Namespace }}'
+spec:
+  replicas: {{ .Values.workloads.affine.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: affine
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      annotations:
+        affine.version: "0.27.4"
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: affine
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: "docker.io/beclab/wait-for:0.1.0"
+        args:
+          - '-it'
+          - >-
+            {{ .Values.postgres.host }}:{{ .Values.postgres.port }}
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        imagePullPolicy: IfNotPresent
+      - name: wait-for-redis
+        image: "docker.io/beclab/wait-for:0.1.0"
+        args:
+          - '-it'
+          - >-
+            redis-svc:6379
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        imagePullPolicy: IfNotPresent
+      - name: init-chmod-data
+        image: "docker.io/beclab/aboveos-busybox:1.37.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - '-c'
+          - |
+            chown -R 1000:1000 /app-cache-root
+        resources: {}
+        volumeMounts:
+          - name: app-cache-root
+            mountPath: /app-cache-root
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext:
+          runAsUser: 0
+      containers:
+      - env:
+        - name: PGID
+          value: "1000"
+        - name: PUID
+          value: "1000"
+        - name: TZ
+          value: Etc/UTC
+        - name: AFFINE_CONFIG_PATH
+          value: "/root/.affine/config"
+        - name: REDIS_SERVER_HOST
+          value: "redis-svc"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-secrets
+              key: DATABASE_URL
+        - name: NODE_ENV
+          value: production
+        - name: AFFINE_SERVER_HOST
+          value: '{{$affineDomain}}'
+        - name: AFFINE_SERVER_HTTPS
+          value: 'false'
+        - name: AFFINE_INDEXER_ENABLED
+          value: 'true'
+        - name: PORT
+          value: '3010'
+        image: "beclab/toeverything-affine:0.27.4"
+        imagePullPolicy: IfNotPresent
+        name: affine
+        ports:
+        - name: proxy-affine
+          containerPort: 3010
+        resources:
+          limits:
+            cpu: "2"
+            memory: 3Gi
+          requests:
+            cpu: 100m
+            memory: 1Gi
+        volumeMounts:
+        - mountPath: /root/.affine/config
+          name: config
+        - mountPath: /root/.affine/storage
+          name: blob
+        - mountPath: /userdata
+          name: userdata
+        readinessProbe:
+          tcpSocket:
+            port: 3010
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        livenessProbe:
+          tcpSocket:
+            port: 3010
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+      restartPolicy: Always
+      volumes:
+      - hostPath:
+          {{- if .Values.sysVersion }}
+            {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+          path: '{{ .Values.userspace.appData }}/config'
+            {{- else }}
+          path: '{{ .Values.userspace.appData }}/affine/config'
+            {{- end }}
+          {{- else }}
+          path: '{{ .Values.userspace.appData }}/affine/config'
+          {{- end }}
+          type: DirectoryOrCreate
+        name: config
+      - hostPath:
+          {{- if .Values.sysVersion }}
+            {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+          path: '{{ .Values.userspace.appData }}/blob'
+            {{- else }}
+          path: '{{ .Values.userspace.appData }}/affine/blob'
+            {{- end }}
+          {{- else }}
+          path: '{{ .Values.userspace.appData }}/affine/blob'
+          {{- end }}
+          type: DirectoryOrCreate
+        name: blob
+      - hostPath:
+          {{- if .Values.sysVersion }}
+            {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+          path: '{{ .Values.userspace.appData }}'
+            {{- else }}
+          path: '{{ .Values.userspace.appData }}/affine'
+            {{- end }}
+          {{- else }}
+          path: '{{ .Values.userspace.appData }}/affine'
+          {{- end }}
+          type: DirectoryOrCreate
+        name: app-cache-root
+      - hostPath:
+          path: '{{ .Values.userspace.userData }}'
+          type: DirectoryOrCreate
+        name: userdata
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: affine
+  name: affine
+  namespace: '{{ .Release.Namespace }}'
+spec:
+  ports:
+  - name: "3010"
+    port: 3010
+    targetPort: 3010
+  selector:
+    io.kompose.service: affine
+status:
+  loadBalancer: {}

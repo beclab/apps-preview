@@ -1,0 +1,165 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.workloads.qbittorrent.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      volumes:
+        - name: external-downloads
+          hostPath:
+            type: DirectoryOrCreate
+            path: "{{ .Values.sharedlib }}"
+        - name: home-downloads
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.userData }}
+        - name: appdata
+          hostPath:
+            type: DirectoryOrCreate
+            path: {{ .Values.userspace.appData }}
+        - name: qbittorrent-init
+          configMap:
+            name: qbittorrent-init
+            defaultMode: 438
+            items:
+              - key: init.sh
+                path: init.sh
+              - key: init-migrate-webui-auth.sh
+                path: init-migrate-webui-auth.sh
+        - name: qbittorrent-defaults
+          configMap:
+            name: qbittorrent-defaults
+            defaultMode: 438
+            items:
+              - key: qBittorrent.conf
+                path: qBittorrent.conf
+      initContainers:
+        - name: init-qbittorrent
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          command:
+            - sh
+            - '-c'
+            - |
+              sh /chart-init/init.sh
+          resources: {}
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: home-downloads
+              mountPath: /olares/userdata/home
+            - name: home-downloads
+              mountPath: /downloads/home
+            - name: appdata
+              mountPath: /appData
+            - name: qbittorrent-init
+              mountPath: /chart-init
+              readOnly: true
+            - name: qbittorrent-defaults
+              mountPath: /chart-defaults
+              readOnly: true
+          securityContext:
+            runAsUser: 0
+        # TODO: drop after all users upgraded from chart <= 1.0.20 (nginx loopback proxy).
+        - name: init-migrate-webui-auth
+          image: "docker.io/beclab/aboveos-busybox:1.37.0"
+          command:
+            - sh
+            - '-c'
+            - |
+              sh /chart-init/init-migrate-webui-auth.sh
+          resources: {}
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: appdata
+              mountPath: /appData
+            - name: qbittorrent-init
+              mountPath: /chart-init
+              readOnly: true
+          securityContext:
+            runAsUser: 0
+      containers:
+        - name: qbittorrent
+          image: "linuxserver/qbittorrent:5.2.3"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PGID
+              value: "1000" 
+            - name: PUID
+              value: "1000" 
+            - name: UMASK
+              value: "002" 
+            - name: TZ
+              value: UTC
+            - name: WEBUI_PORT
+              value: "8080"
+            - name: TORRENTING_PORT
+              value: "6881"
+          volumeMounts:
+            - name: home-downloads
+              mountPath: /olares/userdata/home
+            - name: home-downloads
+              mountPath: /downloads/home
+            - name: home-downloads
+              mountPath: /home
+            - name: external-downloads
+              mountPath: /olares/userdata/external
+            - name: external-downloads
+              mountPath: /downloads/external
+            - name: appdata
+              mountPath: /config/qBittorrent
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 30
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      serviceAccountName: default
+      serviceAccount: default
+      automountServiceAccountToken: true
+      securityContext: {}
+      enableServiceLinks: true
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 600

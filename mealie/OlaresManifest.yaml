@@ -1,0 +1,143 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  mealie: 1
+metadata:
+  name: mealie
+  description: A Place For All Your Recipes
+  icon: https://app.cdn.olares.com/appstore/mealie/icon.png
+  appid: mealie
+  version: '1.0.13'
+  title: Mealie
+  categories:
+  - Lifestyle
+  - homelab
+  tags:
+  - lifestyle
+  - health
+
+permission:
+  appData: true
+  appCache: true
+  userData:
+  - Home
+spec:
+  versionName: '3.25.1'
+  runAsUser: true
+  upgradeDescription: |
+    Upstream release: [Mealie v3.25.1](https://github.com/mealie-recipes/mealie/releases/tag/v3.25.1)
+
+    **Fixes**
+
+    - Sign-in when Mealie is embedded in an iframe.
+    - Recipe time units follow the active locale.
+
+    First login remains `changeme@example.com` / `MyPassword`. Mealie requires a password change on first sign-in.
+
+    **Olares deployment changes**
+
+    - Upgrading from an older Mealie on this app takes ownership of leftover files so the new process can start.
+
+  featuredImage: https://app.cdn.olares.com/appstore/mealie/1.webp
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/mealie/1.webp
+  - https://app.cdn.olares.com/appstore/mealie/2.webp
+  - https://app.cdn.olares.com/appstore/mealie/3.webp
+  - https://app.cdn.olares.com/appstore/mealie/4.webp
+  fullDescription: |
+    Mealie is a self hosted recipe manager, meal planner and shopping list with a RestAPI backend and a reactive frontend built in Vue for a pleasant user experience for the whole family. Easily add recipes into your database by providing the URL and Mealie will automatically import the relevant data, or add a family recipe with the UI editor. Mealie also provides an API for interactions from 3rd party applications.
+
+    **Key Features**
+    - Recipe imports: Create recipes, by importing from a URL or entering data manually
+    - Meal Planner: Use the Meal Planner to plan your what you'll cook for the next week
+    - Shopping List: Put the necessary ingredients on your Shopping List, organised into sections of your local supermarket
+    - Cookbooks: Group recipes into Cookbooks based on your own criteria
+    - Localisation: Translations for 35+ languages
+  developer: Mealie
+  website: https://docs.mealie.io/
+  submitter: Olares
+  sourceCode: https://github.com/mealie-recipes/mealie
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  requiredMemory: 512Mi
+  limitedMemory: 2Gi
+  requiredDisk: 256Mi
+  limitedDisk: 5Gi
+  requiredCpu: 0.5
+  limitedCpu: 1
+  doc: https://docs.mealie.io/
+  supportArch:
+  - amd64
+  - arm64
+options:
+  apiTimeout: 0
+  dependencies:
+  - name: olares
+    type: system
+    version: '>=1.12.6-0'
+entrances:
+- name: mealie
+  port: 9091
+  host: mealie
+  title: Mealie
+  icon: https://app.cdn.olares.com/appstore/mealie/icon.png
+  openMethod: window
+middleware:
+  postgres:
+    username: mealie
+    databases:
+    - name: mealiedb
+      distributed: false
+envs:
+  - envName: SMTP_HOST
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_SERVER
+  - envName: SMTP_PORT
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_PORT
+  - envName: SMTP_FROM_NAME
+    type: string
+    required: false 
+    applyOnChange: true
+    editable: true
+    default: "Mealie"
+  - envName: SMTP_FROM_EMAIL
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_FROM_ADDRESS
+  - envName: SMTP_USER
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_USERNAME
+  - envName: SMTP_PASSWORD
+    required: false
+    applyOnChange: true
+    valueFrom:
+      envName: OLARES_USER_SMTP_PASSWORD
+  - envName: SMTP_AUTH_STRATEGY
+    type: string
+    required: false
+    applyOnChange: true
+    editable: true
+    default: "SSL"
+    options:
+    - title: TLS
+      value: "TLS"
+    - title: SSL
+      value: "SSL"
+    - title: NONE
+      value: "NONE"

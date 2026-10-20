@@ -1,0 +1,9 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migpt-config
+  namespace: {{ .Release.Namespace }}
+data:
+  username: "{{ .Values.olaresEnv.MIGPT_USERNAME }}"
+  password: "{{ .Values.olaresEnv.MIGPT_PASSWORD }}"

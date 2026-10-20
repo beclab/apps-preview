@@ -1,0 +1,131 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nocobase
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+    io.kompose.service: nocobase
+spec:
+  replicas: {{ .Values.workloads.nocobase.replicaCount }}
+  selector:
+    matchLabels:
+      io.kompose.service: nocobase
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.network/chrome-default: "true"
+        io.kompose.service: nocobase
+    spec:
+      enableServiceLinks: false
+      initContainers:
+        - name: init-permissions
+          image: docker.io/beclab/aboveos-busybox:1.37.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /app/nocobase/storage && chown 1000:1000 /app/nocobase/storage
+          volumeMounts:
+            - name: app-data-storage
+              mountPath: /app/nocobase/storage
+      containers:
+      - name: nocobase
+        image: nocobase/nocobase:2.2.7
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 80
+        env:
+        - name: TZ
+          value: Etc/UTC
+        - name: APP_KEY
+          value: default-olares-keys
+        - name: ENCRYPTION_FIELD_KEY
+          value: default-olares-keys-for-ssl
+        - name: DB_DIALECT
+          value: postgres
+        - name: DB_HOST
+          value: {{ .Values.postgres.host }}
+        - name: DB_PORT
+          value: {{ .Values.postgres.port | quote }}
+        - name: DB_DATABASE
+          value: {{ .Values.postgres.databases.nocobase }}
+        - name: DB_USER
+          value: {{ .Values.postgres.username }}
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-secrets
+              key: DB_PASSWORD
+        - name: DB_UNDERSCORED
+          value: 'true'
+        resources:
+          limits:
+            cpu: 500m
+            memory: 2048Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+        volumeMounts:
+        - name: app-data-storage
+          mountPath: /app/nocobase/storage
+        startupProbe:
+          httpGet:
+            path: /
+            port: http
+            scheme: HTTP
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 36
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+            scheme: HTTP
+          timeoutSeconds: 5
+          periodSeconds: 20
+          failureThreshold: 6
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+            scheme: HTTP
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 6
+      restartPolicy: Always
+      volumes:
+      - name: app-data-storage
+        hostPath:
+          type: DirectoryOrCreate
+          {{- if .Values.sysVersion }}
+            {{- if semverCompare ">=1.12.3-0" (toString .Values.sysVersion) }}
+          path: '{{ .Values.userspace.appData }}/storage'
+            {{- else }}
+          path: '{{ .Values.userspace.appData }}/nocobase/storage'
+            {{- end }}
+          {{- else }}
+          path: '{{ .Values.userspace.appData }}/nocobase/storage'
+          {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nocobase
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+    io.kompose.service: nocobase
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    io.kompose.service: nocobase

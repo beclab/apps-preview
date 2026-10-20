@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odoo-config
+  namespace: {{ .Release.Namespace }}
+data:
+  odoo.conf: |
+    [options]
+    db_host = {{ .Values.postgres.host }}
+    db_port = {{ .Values.postgres.port }}
+    db_user = {{ .Values.postgres.username }}
+    db_password = {{ .Values.postgres.password }}
+    db_name = {{ .Values.postgres.databases.odoo }}
+    data_dir = /var/lib/odoo
+    logfile = /var/log/odoo/odoo.log
+    email_from = "{{ .Values.olaresEnv.SMTP_EMAIL_FROM }}"
+    smtp_server = "{{ .Values.olaresEnv.SMTP_SERVER }}"
+    smtp_port = {{ .Values.olaresEnv.SMTP_PORT | default 465 | int }}
+    smtp_ssl = "{{ .Values.olaresEnv.SMTP_SSL }}"
+    smtp_user = "{{ .Values.olaresEnv.SMTP_USER }}"
+    smtp_password = "{{ .Values.olaresEnv.SMTP_PASSWORD }}"

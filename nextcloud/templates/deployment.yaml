@@ -1,0 +1,312 @@
+{{- $nextcloudDomainENV := split "," .Values.domain.nextcloud -}}
+{{- $nextcloudDomain := index $nextcloudDomainENV "_0" -}}
+{{- $entrancePrefix := index (splitList "." $nextcloudDomain) 0 -}}
+{{- $localDomain := printf "%s.%s.olares.local" $entrancePrefix .Values.bfl.username -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: nextcloud
+spec:
+  replicas: {{ .Values.workloads.nextcloud.replicaCount }}
+  selector:
+    matchLabels:
+      app: nextcloud
+  strategy:
+    type: Recreate      
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+      annotations:
+        checksum/olares-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/upgrade-config: {{ include (print $.Template.BasePath "/upgrade-configmap.yaml") . | sha256sum }}
+        checksum/office-config: {{ include (print $.Template.BasePath "/office-configmap.yaml") . | sha256sum }}
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      initContainers:
+        # subPath file mount creates config/ as root; www-data must own it to write config.php
+        - name: init-config-permissions
+          image: "docker.io/beclab/harveyff-nextcloud:31.0.14.3"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "{{ .Values.postgres.databases.nextcloud }}"
+            - name: POSTGRES_USER
+              value: "{{ .Values.postgres.username }}"
+            - name: POSTGRES_HOST
+              value: "{{ .Values.postgres.host }}"
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              if [ -f /var/www/html/version.php ]; then
+                major=$(php -r 'require "/var/www/html/version.php"; echo $OC_Version[0];')
+                if [ "$major" -lt 31 ]; then
+                  echo 'This package supports installed Nextcloud 31 or newer' >&2
+                  exit 1
+                fi
+              fi
+              mkdir -p /var/www/html/config /var/www/html/data
+              chown 1000:1000 /var/www/html /var/www/html/config /var/www/html/data
+              if [ -f /var/www/html/nextcloud-init-sync.lock ]; then
+                chown 1000:1000 /var/www/html/nextcloud-init-sync.lock
+              fi
+              if [ ! -f /var/www/html/config/config.php ]; then
+                table_count="$(php -r '
+                  $dsn = "pgsql:host=" . getenv("POSTGRES_HOST") . ";dbname=" . getenv("POSTGRES_DB");
+                  $pdo = new PDO($dsn, getenv("POSTGRES_USER"), getenv("POSTGRES_PASSWORD"));
+                  echo $pdo->query("SELECT count(*) FROM pg_tables WHERE schemaname = '\''public'\''")->fetchColumn();
+                ')"
+                if [ "$table_count" != "0" ]; then
+                  echo >&2 "config.php is missing, but PostgreSQL contains $table_count public tables; refusing destructive automatic recovery"
+                  exit 1
+                fi
+
+                cp /usr/src/nextcloud/config/CAN_INSTALL /var/www/html/config/CAN_INSTALL
+                for f in /usr/src/nextcloud/config/*.php; do
+                  b=$(basename "$f")
+                  case "$b" in
+                    autoconfig.php|config.sample.php) continue ;;
+                  esac
+                  if [ ! -e "/var/www/html/config/$b" ]; then
+                    cp "$f" "/var/www/html/config/$b"
+                  fi
+                done
+                chown 1000:1000 /var/www/html/config /var/www/html/config/CAN_INSTALL
+                for f in /var/www/html/config/*.php; do
+                  [ -f "$f" ] || continue
+                  chown 1000:1000 "$f"
+                done
+
+                # A failed 1.0.23+ fresh install leaves the copied version.php
+                # behind even though PostgreSQL is empty. Remove only that
+                # false installation marker and the fallback SQLite files so
+                # the official entrypoint performs maintenance:install again.
+                rm -f /var/www/html/version.php
+                rm -f /var/www/html/data/owncloud.db \
+                      /var/www/html/data/owncloud.db-shm \
+                      /var/www/html/data/owncloud.db-wal
+              fi
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/www/html
+        - name: migrate-nextcloud-31
+          image: "docker.io/beclab/harveyff-nextcloud:31.0.14-bridge.2"
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - name: MIGRATION_STAGE
+              value: "31"
+          command: ["/bin/sh", "/olares/migrate.sh"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1.5Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/www/html
+            - name: external-storage
+              mountPath: /external_storage
+            - name: home-storage
+              mountPath: /home_storage
+            - name: upgrade
+              mountPath: /olares
+        - name: migrate-nextcloud-32
+          image: "docker.io/beclab/harveyff-nextcloud:32.0.14-olares.3"
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          env:
+            - name: MIGRATION_STAGE
+              value: "32"
+          command: ["/bin/sh", "/olares/migrate.sh"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1.5Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/www/html
+            - name: external-storage
+              mountPath: /external_storage
+            - name: home-storage
+              mountPath: /home_storage
+            - name: upgrade
+              mountPath: /olares
+      containers:
+        - name: nextcloud
+          image: "docker.io/beclab/harveyff-nextcloud:33.0.9-office.3"
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-office
+                  key: JWT_SECRET
+            - name: OFFICE_PUBLIC_URL
+              value: "https://{{ $nextcloudDomain }}/office/"
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Etc/UTC"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "{{ .Values.postgres.databases.nextcloud }}"
+            - name: POSTGRES_USER
+              value: "{{ .Values.postgres.username }}"
+            - name: POSTGRES_HOST
+              value: "{{ .Values.postgres.host }}"
+            - name: NEXTCLOUD_APPS_INSTALL
+              value: "files_external"
+            - name: NEXTCLOUD_APPS_ENABLE
+              value: "files_external"
+            - name: NEXTCLOUD_ADMIN_USER
+              value: "{{ .Values.olaresEnv.NEXTCLOUD_ADMIN_USER }}"
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: NEXTCLOUD_ADMIN_PASSWORD
+            - name: NEXTCLOUD_TRUSTED_DOMAINS
+              value: "{{ $nextcloudDomain }} {{ $localDomain }} localhost"
+{{/*            - name: APACHE_DISABLE_REWRITE_IP*/}}
+{{/*              value: "1"*/}}
+            - name: TRUSTED_PROXIES
+              value: "10.0.0.0/8 172.16.0.0/12 127.0.0.1"
+            - name: OVERWRITECLIURL
+              value: "https://{{$nextcloudDomain}}"
+            - name: OVERWRITEPROTOCOL
+              value: "https"
+            - name: NEXTCLOUD_MOUNT_EXTERNAL_STORAGE
+              value: "true"
+            - name: NEXTCLOUD_MOUNT_EXTERNAL_STORAGE_NAME
+              value: "External Storage"
+            - name: NEXTCLOUD_MOUNT_EXTERNAL_STORAGE_PATH
+              value: "/external_storage"
+            - name: NEXTCLOUD_MOUNT_HOME_STORAGE
+              value: "true"
+            - name: NEXTCLOUD_MOUNT_HOME_STORAGE_NAME
+              value: "Home Storage"
+            - name: NEXTCLOUD_MOUNT_HOME_STORAGE_PATH
+              value: "/home_storage"
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1.5Gi
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /status.php
+              port: 8080
+              httpHeaders:
+                - name: Host
+                  value: localhost
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 6
+          volumeMounts:
+            - name: data
+              mountPath: /var/www/html
+            - name: config-env
+              mountPath: /var/www/html/config/zz-olares.config.php
+              subPath: zz-olares.config.php
+            - name: office-configure
+              mountPath: /docker-entrypoint-hooks.d/post-installation/office.sh
+              subPath: configure-nextcloud.sh
+            - name: office-configure
+              mountPath: /docker-entrypoint-hooks.d/post-upgrade/office.sh
+              subPath: configure-nextcloud.sh
+            - name: office-configure
+              mountPath: /docker-entrypoint-hooks.d/before-starting/office.sh
+              subPath: configure-nextcloud.sh
+            - name: external-storage
+              mountPath: /external_storage
+            - name: home-storage
+              mountPath: /home_storage
+      volumes:
+        - name: upgrade
+          configMap:
+            name: {{ .Release.Name }}-upgrade
+            defaultMode: 0555
+        - name: office-configure
+          configMap:
+            name: nextcloud-office-runtime
+            defaultMode: 0555
+        - name: config-env
+          configMap:
+            name: nextcloud-config
+            defaultMode: 0444
+            items:
+              - key: zz-olares.config.php
+                path: zz-olares.config.php
+        - name: data
+          hostPath:
+            path: "{{ .Values.userspace.appData }}/nextcloud/data"
+            type: DirectoryOrCreate
+        - name: config
+          hostPath:
+            path: "{{ .Values.userspace.appData }}/nextcloud/config"
+            type: DirectoryOrCreate
+        - name: external-storage
+          hostPath:
+            path: "{{ .Values.sharedlib }}"
+            type: DirectoryOrCreate
+        - name: home-storage
+          hostPath:
+            path: "{{ .Values.userspace.userData }}"
+            type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app: nextcloud
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

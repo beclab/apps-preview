@@ -1,0 +1,22 @@
+metadata:
+  title: Coder
+  description: 自托管的云开发环境。
+spec:
+  fullDescription: |
+    Coder 是一个自托管的开源云开发环境，可与任何云、IDE、OS、Git 提供商和 IDP 配合使用。
+
+    Coder 使组织能够在其公共或私有云基础架构中设置开发环境。云开发环境使用 Terraform 定义，通过安全的高速 Wireguard® 隧道连接，并在不使用时自动关闭以节省成本。 Coder 使工程团队能够灵活地将云用于对他们最有利的工作负载。
+    
+    - 在 Terraform 中定义云开发环境
+      - EC2 VM、Kubernetes Pod、Docker 容器等。
+    - 自动关闭闲置资源以节省成本
+    - 在几秒钟内（而不是几天）即可让开发人员入职
+  upgradeDescription: |
+    Chart 1.0.23 将 Coder 从 v2.31.9 升级到 v2.36.6。
+    镜像为 docker.io/beclab/coder-coder:v2.36.6。
+
+    PostgreSQL 连接、访问地址和可选的 Anthropic key 保持不变。Coder 会在启动时执行数据库迁移。若已存在 public.schema_migrations，init 容器会先把 PostgreSQL custom 格式备份写到 appData/backups/chart-1.0.23/coder.dump。之后再次启动，以及没有这张表的数据库，都会跳过备份。存活探针的等待时间加长，避免迁移过程中被杀掉。
+
+    v2.36 会把已有的 login_type=none 账号转成密码登录；除非打开 oauth2_dcr_enabled，否则不再接受新的 OAuth2 动态客户端注册；并删除 chat_model_configs.provider。本 chart 不会创建 login_type=none 用户。
+
+    发行说明：https://github.com/coder/coder/releases/tag/v2.36.6

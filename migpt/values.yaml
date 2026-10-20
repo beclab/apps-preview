@@ -1,0 +1,10 @@
+image:
+  version: '1.12.0'
+
+userspace:
+  appdata: ""
+workloads:
+  migpt:
+    replicaCount: 1
+  migpt-nginx:
+    replicaCount: 1

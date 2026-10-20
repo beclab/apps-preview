@@ -1,0 +1,28 @@
+metadata:
+  title: NemoClaw
+  description: NVIDIA NemoClaw - KI-Coding-Agent mit Sandbox-Isolation
+spec:
+  fullDescription: |
+    **Überblick**
+    NVIDIA NemoClaw ist ein Open-Source-Referenzstack, der das sicherere Ausführen von [OpenClaw](https://openclaw.ai)-Assistenten im Dauerbetrieb vereinfacht.
+    Er installiert die [NVIDIA OpenShell](https://github.com/NVIDIA/OpenShell)-Runtime, Teil des NVIDIA Agent Toolkit, und bietet zusätzliche Sicherheit für autonome Agenten.
+
+    > **Alpha-Software**
+    >
+    > NemoClaw ist ab dem 16. März 2026 als Early Preview verfügbar. Diese Software ist nicht produktionsreif. Schnittstellen, APIs und Verhalten können sich ohne Vorankündigung ändern. Das Projekt dient dem Feedback und frühen Experimenten. Issues und Diskussionen aus der Community sind willkommen.
+
+    Offizielle Docs: [NemoClaw](https://docs.nvidia.com/nemoclaw/latest/index.html), [Remote-Dashboard / CHAT_UI_URL](https://docs.nvidia.com/nemoclaw/latest/deployment/deploy-to-remote-gpu.html#remote-dashboard-access).
+
+    **Olares**
+    - **CLI** — Terminal; `nemoclaw my-assistant connect`, dann `openclaw tui`. OpenShell: `openshell status` / `openshell doctor`.
+    - **Web-UI** — **CHAT_UI_URL** oder Olares **domain.webtui** setzen; Chart patcht **allowedOrigins**. Gateway-Token: `nemoclaw my-assistant gateway-token --quiet`.
+    - **Env** — Erforderlich: **NEMOCLAW_PROVIDER**, **NEMOCLAW_ENDPOINT_URL** (/v1), **NEMOCLAW_MODEL**. Optional: **NEMOCLAW_OPENCLAW_VERSION** (Standard: gepinntes OpenClaw), Policy-Tier/Modus, Gateway-Netns. Vollständige Beschreibungen siehe englisches Manifest.
+
+  upgradeDescription: |
+    Olares-Chart **1.0.30** optimiert den Installationsablauf.
+    - OpenClaw wird von Startaufgaben nur nacheinander installiert. Das Gateway startet erst danach; die Laufzeitvorbereitung wird vor der Gateway-Prüfung erneut versucht.
+    - App-Zugänge werden erst nach Prüfung des Modellendpunkts und einer erfolgreichen Gateway-Antwort freigegeben. Vollständiges Lesen der Prüfantworten vermeidet vorzeitige Verbindungsabbrüche.
+    - Verbessert die Vorbereitung der Komponenten, die Wiederverwendung zwischengespeicherter Images und die Verbindung zum Modelldienst.
+    - App-Zugänge werden erst freigegeben, wenn WebUI, JavaScript, Stylesheets und Gateway erfolgreich geprüft wurden. Laufende Bereitschaftsprüfungen ersetzen die feste Wartezeit von fünf Minuten.
+    - Die standardmäßige OpenClaw-Laufzeit wird auf **2026.6.35** aktualisiert. Die Build-Version bleibt **2026.4.24**, NemoClaw bleibt **v0.0.38**.
+    - Bestehende Installationen behalten ihre gespeicherten Umgebungsvariablen. Um die neue Laufzeit zu verwenden, setzen Sie **NEMOCLAW_OPENCLAW_VERSION** auf **2026.6.35**, falls noch eine ältere Version eingetragen ist.

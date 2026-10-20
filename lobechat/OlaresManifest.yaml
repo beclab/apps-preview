@@ -1,0 +1,147 @@
+---
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  lobechat: 1
+metadata:
+  name: lobechat
+  icon: https://app.cdn.olares.com/appstore/lobechat/icon.png
+  description: An open-source, modern-design AI chat framework.
+  title: LobeChat
+  version: "1.0.18"
+  appid: lobechat
+  categories:
+    - Utilities_v112
+entrances:
+  - name: lobechat
+    host: lobechat
+    port: 80
+    icon: https://app.cdn.olares.com/appstore/lobechat/icon.png
+    title: LobeChat
+    authLevel: private
+    openMethod: window
+spec:
+  versionName: "2.1.39"
+  featuredImage: https://app.cdn.olares.com/appstore/lobechat/image01.webp
+  promoteImage:
+    - https://app.cdn.olares.com/appstore/lobechat/image01.webp
+    - https://app.cdn.olares.com/appstore/lobechat/image02.webp
+    - https://app.cdn.olares.com/appstore/lobechat/image04.webp
+    - https://app.cdn.olares.com/appstore/lobechat/image05.webp
+    - https://app.cdn.olares.com/appstore/lobechat/image06.webp
+    - https://app.cdn.olares.com/appstore/lobechat/image07.webp
+    - https://app.cdn.olares.com/appstore/lobechat/image08.webp
+  fullDescription: |
+    Lobe Chat is An open-source, modern-design ChatGPT/LLMs UI/Framework. Supports speech-synthesis, multi-modal, and extensible (function call) plugin system.
+
+    **Features**
+    **File Upload/Knowledge Base**
+    LobeChat supports file upload and knowledge base functionality. You can upload various types of files including documents, images, audio, and video, as well as create knowledge bases, making it convenient for users to manage and search for files. Additionally, you can utilize files and knowledge base features during conversations, enabling a richer dialogue experience.
+
+    **Multi-Model Service Provider Support**
+    We have implemented support for the following model service providers:
+    - OpenAI
+    - Ollama
+    - Anthropic
+    - Bedrock
+    - Google
+    - DeepSeek
+    - HuggingFace
+    - OpenRouter
+    - Cloudflare Workers AI
+    - GitHub
+
+    **Local Large Language Model (LLM) Support**
+    To meet the specific needs of users, LobeChat also supports the use of local models based on Ollama, allowing users to flexibly use their own or third-party models.
+
+    **Model Visual Recognition**
+    LobeChat now supports OpenAI's latest gpt-4-vision model with visual recognition capabilities, a multimodal intelligence that can perceive visuals. Users can easily upload or drag and drop images into the dialogue box, and the agent will be able to recognize the content of the images and engage in intelligent conversation based on this, creating smarter and more diversified chat scenarios.
+
+    **TTS & STT Voice Conversation**
+    LobeChat supports Text-to-Speech (TTS) and Speech-to-Text (STT) technologies, enabling our application to convert text messages into clear voice outputs, allowing users to interact with our conversational agent as if they were talking to a real person. Users can choose from a variety of voices to pair with the agent.
+
+    **Text to Image Generation**
+    With support for the latest text-to-image generation technology, LobeChat now allows users to invoke image creation tools directly within conversations with the agent.
+
+    **Plugin System (Function Calling)**
+    The plugin ecosystem of LobeChat is an important extension of its core functionality, greatly enhancing the practicality and flexibility of the LobeChat assistant.
+
+    **Agent Market (GPTs)**
+    In LobeChat Agent Marketplace, creators can discover a vibrant and innovative community that brings together a multitude of well-designed agents, which not only play an important role in work scenarios but also offer great convenience in learning processes.
+
+    **Support Multi-User Management**
+    LobeChat supports multi-user management and provides two main user authentication and management solutions to meet different needs
+    - next-auth: LobeChat integrates next-auth, a flexible and powerful identity verification library that supports multiple authentication methods
+    - Clerk: For users who need more advanced user management features, LobeChat also supports Clerk, a modern user management platform. 
+
+    **Progressive Web App (PWA) and Mobile Device Adaptation**
+    Through PWA, LobeChat can offer a highly optimized user experience on both desktop and mobile devices while maintaining its lightweight and high-performance characteristics
+
+    **Custom Themes**
+    As a design-engineering-oriented application, LobeChat places great emphasis on users' personalized experiences, hence introducing flexible and diverse theme modes, including a light mode for daytime and a dark mode for nighttime. Beyond switching theme modes, a range of color customization options allow users to adjust the application's theme colors according to their preferences.
+  upgradeDescription: |
+    Fix Olares auth, ComfyUI async tasks, and Cloudflare R2 object storage defaults.
+
+    Changes
+    - Fix `JWKS_KEY` duplicate prefix that broke async image generation JWT signing
+    - Add `INTERNAL_APP_URL=http://127.0.0.1:3210` for in-pod self-calls (ComfyUI / async tRPC)
+    - Add `AUTH_TRUSTED_ORIGINS` and `MIDDLEWARE_REWRITE_THROUGH_LOCAL=0` for Olares hash entrance and reverse proxy
+    - Set `APP_URL` to HTTPS entrance; preload patch rewrites pod self-calls to `INTERNAL_APP_URL` (2.1.39 ComfyUI)
+    - Add R2 defaults: `S3_REGION=auto`, `S3_SET_ACL=0` (replace S3_* placeholders with your bucket)
+
+    Notes
+    - Still pinned to LobeHub v2.1.39 (>=2.1.40 requires `pg_search` on Olares system postgres)
+    - ComfyUI provider in 2.1.39 still uses `APP_URL` for `/webapi/create-image/comfyui`
+
+    View full release note at: https://github.com/lobehub/lobehub/releases/tag/v2.1.39
+
+  developer: LobeHub
+  website: https://lobehub.com/
+  sourceCode: https://github.com/lobehub/lobe-chat
+  submitter: Olares
+  locale:
+    - en-US
+    - zh-CN
+  doc: https://lobehub.com/docs/usage/start
+  license:
+    - text: LobeChat License
+      url: https://github.com/lobehub/lobe-chat?tab=License-1-ov-file
+  requiredMemory: 1000Mi
+  requiredDisk: 1Gi
+  requiredCpu: 600m
+  limitedMemory: 4000Mi
+  limitedCpu: 4000m
+  supportArch:
+    - amd64
+permission:
+  appData: true
+  appCache: true
+  userData:
+    - Home
+middleware:
+  postgres:
+    username: lobechat
+    password: lobechat
+    databases:
+      - name: lobechat
+        distributed: false
+        extensions:
+          - vchord
+          - vector
+          - vectors
+          - earthdistance
+        scripts:
+          - BEGIN;
+          - ALTER DATABASE $databasename SET search_path TO "$user", public, vectors;
+          - ALTER SCHEMA vectors OWNER TO $dbusername;
+          - COMMIT;
+  redis:
+    namespace: db0
+options:
+  apiTimeout: 0
+  dependencies:
+    - name: olares
+      version: '>=1.12.6-0'
+      type: system

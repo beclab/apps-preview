@@ -1,0 +1,112 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  surrealdb: 1
+  opennotebook: 1
+  opennotebookingress: 1
+metadata:
+  name: opennotebook
+  icon: https://app.cdn.olares.com/appstore/opennotebook/icon.png
+  description: A powerful open-source, AI-powered note-taking/research platform that respects your privacy
+  appid: opennotebook
+  title: Open Notebook
+  version: '1.0.17'
+  categories:
+  - Productivity_v112
+  - workspace
+  - agents
+  tags:
+  - workbench
+  - note-taking
+
+entrances:
+- authLevel: internal
+  host: opennotebookingress
+  icon: https://app.cdn.olares.com/appstore/opennotebook/icon.png
+  name: notebook
+  openMethod: window
+  port: 8080
+  title: Open Notebook
+spec:
+  versionName: '1.14.0'
+  promoteImage:
+  - https://app.cdn.olares.com/appstore/opennotebook/1.webp
+  - https://app.cdn.olares.com/appstore/opennotebook/2.webp
+  - https://app.cdn.olares.com/appstore/opennotebook/3.webp
+  - https://app.cdn.olares.com/appstore/opennotebook/4.webp
+
+  fullDescription: |
+    Open Notebook is an open source, privacy-focused alternative to Google's Notebook LM!
+
+    In a world dominated by Artificial Intelligence, having the ability to think and acquire new knowledge, is a skill that should not be a privilege for a few, nor restricted to a single provider.
+
+    Open Notebook empowers you to:
+    - Control your data: Keep your research private and secure
+    - Choose your AI models: Support for 16+ providers including OpenAI, Anthropic, Ollama, LM Studio, and more — all configurable via UI
+    - Organize multi-modal content: PDFs, videos, audio, web pages, and more
+    - Generate professional podcasts: Advanced multi-speaker podcast generation
+    - Search intelligently: Full-text and vector search across all your content
+    - Chat with context: AI conversations powered by your research
+
+  upgradeDescription: |
+
+    Run the official OpenResty entrance as UID/GID 1000 with writable runtime paths.
+    Chart refactor aligned with Open Notebook 1.14.0 upstream layout.
+
+    Deployment changes:
+    - Single data volume `/app/data` (uploads, podcasts, caches live under it)
+    - Official `docker-entrypoint.sh` for opt-in runtime installs (Docling/Crawl4AI)
+    - `FRONTEND_BIND_HOST=0.0.0.0` replaces deprecated `HOSTNAME` binding
+    - Removed legacy SQLite seeding, config.toml init, and appCache migration init containers
+    - One-time init merges legacy host `uploads/` and `config/` into `/app/data` for upgrades
+    - Set `OPEN_NOTEBOOK_EMBEDDING_BATCH_SIZE=1` for llama.cpp-compatible embedding backends
+
+    Open Notebook 1.14.0 — official images, no beclab mirror for app/database:
+    - App: `lfnovo/open_notebook:1.14.0`
+    - Database: `surrealdb/surrealdb:v2`
+
+    Full release notes: https://github.com/lfnovo/open-notebook/releases/tag/v1.14.0
+
+  developer: lfnovo
+  website: https://www.open-notebook.ai/
+  sourceCode: https://github.com/lfnovo/open-notebook
+  submitter: Olares
+  locale:
+  - en-US
+  - zh-CN
+  - de-DE
+  - es-ES
+  - it-IT
+  - fr-FR
+  - ja-JP
+  doc: https://www.open-notebook.ai/get-started.html
+  license:
+  - text: MIT
+    url: https://github.com/lfnovo/open-notebook?tab=MIT-1-ov-file
+  limitedCpu: 3.5
+  limitedDisk: 50Gi
+  limitedMemory: 4.5Gi
+  requiredCpu: 310m
+  requiredDisk: 50Mi
+  requiredMemory: 576Mi
+  supportArch:
+  - amd64
+  - arm64
+permission:
+  appData: true
+  appCache: true
+options:
+  apiTimeout: 0
+  dependencies:
+  - name: olares
+    version: '>=1.12.6-0'
+    type: system
+envs:
+  - envName: PASSWORD
+    required: false
+    applyOnChange: true
+    type: password
+    editable: true
+    description: "Set a password to protect your Open Notebook instance (for public hosting)"

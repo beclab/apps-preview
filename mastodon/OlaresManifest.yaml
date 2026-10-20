@@ -1,0 +1,252 @@
+---
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+
+workloadReplicas:
+  mastodon-sidekiq: 1
+  mastodon-streaming: 1
+  mastodon-web: 1
+  mastodon: 1
+  mastodon-elasticsearch-coordinating: 1
+  mastodon-elasticsearch-data: 1
+  mastodon-elasticsearch-ingest: 1
+  mastodon-elasticsearch-master: 1
+  mastodon-redis-master: 1
+metadata:
+  name: mastodon
+  description: Your self-hosted, globally interconnected microblogging community
+  icon: https://app.cdn.olares.com/appstore/mastodon/icon.png
+  appid: mastodon
+  version: '1.0.25'
+  title: Mastodon
+  categories:
+  - Fun
+  - homelab
+  tags:
+  - lifestyle
+  - social-network
+
+permission:
+  appData: true
+  appCache: true
+spec:
+  versionName: "4.7.1"
+  featuredImage: https://app.cdn.olares.com/appstore/mastodon/promote_image_1v2.webp
+  promoteImage:
+    - https://app.cdn.olares.com/appstore/mastodon/promote_image_1v2.webp
+    - https://app.cdn.olares.com/appstore/mastodon/promote_image_2v2.webp
+    - https://app.cdn.olares.com/appstore/mastodon/promote_image_3v2.webp
+    - https://app.cdn.olares.com/appstore/mastodon/promote_image_4v2.webp
+    - https://app.cdn.olares.com/appstore/mastodon/promote_image_5v2.webp
+  fullDescription: |
+    Mastodon is a free, open-source social network server based on ActivityPub where users can follow friends and discover new ones.
+
+    On Mastodon, users can publish anything they want: links, pictures, text, and video. All Mastodon servers are interoperable as a federated network (users on one server can seamlessly communicate with users from another one, including non-Mastodon software that implements ActivityPub!)
+
+    **Features**
+    No vendor lock-in: Fully interoperable with any conforming platform
+    - It doesn't have to be Mastodon; whatever implements ActivityPub is part of the social network!
+
+    Real-time, chronological timeline updates
+    - Updates of people you're following appear in real-time in the UI via WebSockets. There's a firehose view as well!
+
+    Media attachments like images and short videos
+    - Upload and view images and WebM/MP4 videos attached to the updates. Videos with no audio track are treated like GIFs; normal videos loop continuously!
+
+    Safety and moderation tools
+    - Mastodon includes private posts, locked accounts, phrase filtering, muting, blocking, and all sorts of other features, along with a reporting and moderation system.
+
+    OAuth2 and a straightforward REST API
+    - Mastodon acts as an OAuth2 provider, so 3rd party apps can use the REST and Streaming APIs. This results in a rich app ecosystem with a lot of choices!
+
+  upgradeDescription: |
+    Add the Helm release revision to the initialization Job name so upgrades do not patch its immutable pod template.
+    Upstream release: [Mastodon 4.7.1](https://github.com/mastodon/mastodon/releases/tag/v4.7.1)
+
+    **Breaking change**
+
+    - Users who have not signed in since Mastodon 4.3 will be logged out.
+    - Database migrations from 4.5 can take a long time on large instances. Keep a database backup before upgrading.
+    - If you are upgrading from 4.5, also review the [4.6.0](https://github.com/mastodon/mastodon/releases/tag/v4.6.0) and [4.7.0](https://github.com/mastodon/mastodon/releases/tag/v4.7.0) notes.
+
+    **What's changed**
+
+    - Remote accounts that change handles are renamed instead of duplicated.
+    - Outgoing posts with a preview card include a Link attachment.
+    - Admin includes hashtag audit logs and a search field on IP blocks.
+
+    **Fixes**
+
+    - Password authentication bypass in 2FA for LDAP, PAM, and SSO accounts.
+    - Denial of service when processing pathological JSON-LD activities.
+    - Disabled staff accounts could still use the admin API.
+
+    **Olares deployment changes**
+
+    - Opening the app homepage through the Olares entrance no longer returns 500.
+    - Real-time streaming is enabled. It was previously turned off.
+    - The streaming health URL no longer redirects to a broken `https:/…` location.
+
+  developer: Mastodon gGmbH
+  website: https://joinmastodon.org/
+  sourceCode: https://github.com/mastodon/mastodon
+  submitter: Olares
+  locale:
+    - en-US
+    - zh-CN
+    - de-DE
+    - es-ES
+    - it-IT
+    - fr-FR
+    - ja-JP
+  requiredMemory: 8842Mi
+  limitedMemory: 22Gi
+  requiredDisk: 128Mi
+  limitedDisk: 20Gi
+  requiredCpu: 3
+  limitedCpu: 10
+  doc: https://docs.joinmastodon.org/
+  legal:
+    - text: Trademark Policy
+      url: https://joinmastodon.org/trademark
+    - text: Privacy Policy
+      url: https://joinmastodon.org/privacy-policy
+    - text: Code of Conduct
+      url: https://github.com/mastodon/mastodon/blob/main/CODE_OF_CONDUCT.md
+    - text: Security policy
+      url: https://github.com/mastodon/mastodon/security/policy
+  license:
+    - text: AGPL-3.0
+      url: https://github.com/mastodon/mastodon/blob/main/LICENSE
+  supportClient:
+    android: https://play.google.com/store/apps/details?id=org.joinmastodon.android
+    ios: https://apps.apple.com/us/app/mastodon-for-iphone-and-ipad/id1571998974
+  supportArch:
+    - amd64
+    - arm64
+options:
+  allowedOutboundPorts:
+    - 465
+    - 587
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+    - name: minio
+      type: middleware
+      version: ">=1.0.0-0"
+      mandatory: true
+  policies:
+    - uriRegex: ^/
+      level: public
+      oneTime: false
+      validDuration: 3600s
+      entranceName: mastodonapache
+  oidc:
+    enabled: true
+    redirectUri: /auth/auth/openid_connect/callback
+    entranceName: mastodonapache
+entrances:
+  - name: mastodonapache
+    port: 80
+    host: mastodon-nginx
+    title: Mastodon
+    icon: https://app.cdn.olares.com/appstore/mastodon/icon.png
+    openMethod: window
+envs:
+  - envName: SMTP_SERVER
+    required: false
+    valueFrom:
+      envName: OLARES_USER_SMTP_SERVER
+    applyOnChange: true
+  - envName: SMTP_PORT
+    required: false
+    valueFrom:
+      envName: OLARES_USER_SMTP_PORT
+    applyOnChange: true
+  - envName: SMTP_LOGIN
+    required: false
+    valueFrom:
+      envName: OLARES_USER_SMTP_USERNAME
+    applyOnChange: true
+  - envName: SMTP_PASSWORD
+    required: false
+    valueFrom:
+      envName: OLARES_USER_SMTP_PASSWORD
+    applyOnChange: true
+  - envName: SMTP_FROM_ADDRESS
+    required: false
+    valueFrom:
+      envName: OLARES_USER_SMTP_FROM_ADDRESS
+    applyOnChange: true
+  - envName: SMTP_DOMAIN
+    required: false
+    type: domain
+    editable: true
+    applyOnChange: true
+  - envName: SMTP_DELIVERY_METHOD
+    type: string
+    editable: true
+    applyOnChange: true
+    required: false
+    default: "smtp"
+  - envName: SMTP_AUTH_METHOD
+    type: string
+    editable: true
+    applyOnChange: true
+    required: false
+  - envName: SMTP_CA_FILE
+    type: string
+    editable: true
+    applyOnChange: true
+    required: false
+  - envName: SMTP_OPENSSL_VERIFY_MODE
+    type: string
+    editable: true
+    applyOnChange: true
+    required: false
+  - envName: SMTP_ENABLE_STARTTLS_AUTO
+    type: string
+    editable: true
+    applyOnChange: true
+    required: false
+    valueFrom:
+      envName: OLARES_USER_SMTP_USE_TLS
+  - envName: SMTP_ENABLE_STARTTLS
+    type: string
+    editable: true
+    applyOnChange: true
+    required: false
+    valueFrom:
+      envName: OLARES_USER_SMTP_USE_TLS
+  - envName: SMTP_TLS
+    applyOnChange: true
+    required: false
+    valueFrom:
+      envName: OLARES_USER_SMTP_USE_TLS
+  - envName: SMTP_SSL
+    applyOnChange: true
+    required: false
+    valueFrom:
+      envName: OLARES_USER_SMTP_USE_SSL
+  - envName: USER_EMAIL
+    required: true
+    type: email
+    editable: false
+  - envName: USER_PASSWORD
+    required: true
+    type: password
+    editable: false
+    regex: '^[\w\-!@#$%^&*()+={}\[\]:,.?~]{6,}$'
+    description: "Password must be at least 6 characters"
+middleware:
+  postgres:
+    username: mastodon
+    databases:
+      - name: mastodon
+        distributed: true
+  minio:
+    username: mastodon
+    buckets:
+      - name: mastodon

@@ -1,0 +1,147 @@
+{{- $appDomainENV := split "," .Values.domain.librechatclient -}}
+{{- $appDomain := index $appDomainENV "_0" -}}
+{{- $topDomain := regexReplaceAll ".*?([^.]+\\.[^.]+)$" $appDomain "$1" -}}
+{{- $oe := .Values.olaresEnv | default dict -}}
+{{- $customURL := $oe.ENDPOINT_BASE_URL | default "" | trim -}}
+{{- if not $customURL -}}
+{{- $customURL = $oe.CUSTOM_ENDPOINT_BASE_URL | default "" | trim -}}
+{{- end -}}
+{{- if $customURL -}}
+{{- $customURL = trimSuffix "/" $customURL -}}
+{{- if not (hasSuffix "/v1" $customURL) -}}
+{{- $customURL = printf "%s/v1" $customURL -}}
+{{- end -}}
+{{- $customURL = printf "%s/" $customURL -}}
+{{- end -}}
+{{- $customName := $oe.ENDPOINT_NAME | default "" | trim -}}
+{{- if not $customName -}}
+{{- $customName = $oe.CUSTOM_ENDPOINT_NAME | default "" | trim -}}
+{{- end -}}
+{{- if not $customName -}}
+{{- $customName = "Custom" -}}
+{{- end -}}
+{{- $customKey := $oe.ENDPOINT_API_KEY | default $oe.CUSTOM_ENDPOINT_API_KEY | default "" -}}
+{{- $customModelsRaw := $oe.ENDPOINT_MODELS | default "" | trim -}}
+{{- if not $customModelsRaw -}}
+{{- $customModelsRaw = $oe.CUSTOM_ENDPOINT_MODELS | default "" | trim -}}
+{{- end -}}
+{{- $customModels := compact (splitList "," $customModelsRaw) -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: librechat-config
+  namespace: '{{ .Release.Namespace }}'
+data:
+  librechat.yaml: |
+    version: 1.3.13
+    cache: true
+    endpoints:
+      custom:
+{{- if $customURL }}
+        - name: {{ $customName | quote }}
+          apiKey: {{ $customKey | quote }}
+          baseURL: {{ $customURL | quote }}
+          models:
+            default:
+{{- if $customModels }}
+{{- range $customModels }}
+              - {{ . | trim | quote }}
+{{- end }}
+{{- else }}
+              []
+{{- end }}
+            fetch: true
+          titleConvo: true
+          titleModel: "current_model"
+          modelDisplayLabel: {{ $customName | quote }}
+{{- else }}
+        []
+{{- end }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: librechat-env
+  namespace: '{{ .Release.Namespace }}'
+data:
+  # Server Configuration
+  HOST: "0.0.0.0"
+  PORT: "3080"
+  NODE_ENV: "production"
+  NO_INDEX: "true"
+  TRUST_PROXY: "1"
+  DOMAIN_CLIENT: "http://localhost:3080"
+  DOMAIN_SERVER: "http://localhost:3080"
+  
+  # MongoDB Configuration
+  MONGO_URI: "mongodb://admin:librechat123456@librechat-mongodb:27017/LibreChat?authSource=admin"
+  
+  # MeiliSearch Configuration
+  MEILI_HOST: "http://librechat-meilisearch:7700"
+  LIBRECHAT_TEMP_CREDENTIALS_PATH: "/app/data/.env.temp"
+  
+  # Debug Logging
+  DEBUG_LOGGING: "true"
+  DEBUG_CONSOLE: "true"
+  CONSOLE_JSON: "true"
+  
+  # Node Options
+  NODE_MAX_OLD_SPACE_SIZE: "6144"
+  
+  # Permissions
+  ALLOW_REGISTRATION: "true"
+  ALLOW_SOCIAL_LOGIN: "true"
+  
+  # Other Configuration
+  ALLOW_SHARED_LINKS: "true"
+  ALLOW_SHARED_LINKS_PUBLIC: "true"
+  APP_TITLE: "LibreChat"
+  HELP_AND_FAQ_URL: "https://librechat.ai"
+
+---
+{{- $existingApiKeys := lookup "v1" "ConfigMap" .Release.Namespace "librechat-api-keys" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: librechat-api-keys
+  namespace: '{{ .Release.Namespace }}'
+data:
+  # AI Provider API Keys
+  # You can edit this ConfigMap via: kubectl edit configmap librechat-api-keys
+  # Values are preserved during upgrades
+  {{- $openaiKey := "" }}
+  {{- if and .Values.env .Values.env.OPENAI_API_KEY }}
+  {{- $openaiKey = .Values.env.OPENAI_API_KEY }}
+  {{- else if $existingApiKeys }}
+  {{- $openaiKey = index $existingApiKeys.data "OPENAI_API_KEY" | default "" }}
+  {{- end }}
+  OPENAI_API_KEY: {{ $openaiKey | quote }}
+  {{- if $existingApiKeys }}
+  {{- $apiKeys := list "ANTHROPIC_API_KEY" "GOOGLE_KEY" "GEMINI_API_KEY" "ANYSCALE_API_KEY" "COHERE_API_KEY" "DEEPSEEK_API_KEY" "FIREWORKS_API_KEY" "GROQ_API_KEY" "HUGGINGFACE_TOKEN" "MISTRAL_API_KEY" "OPENROUTER_KEY" "PERPLEXITY_API_KEY" "TOGETHERAI_API_KEY" "XAI_API_KEY" "BEDROCK_AWS_DEFAULT_REGION" "BEDROCK_AWS_ACCESS_KEY_ID" "BEDROCK_AWS_SECRET_ACCESS_KEY" "PROXY" "OPENWEATHER_API_KEY" }}
+  {{- range $key := $apiKeys }}
+  {{- $value := index $existingApiKeys.data $key | default "" }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- else }}
+  ANTHROPIC_API_KEY: ""
+  GOOGLE_KEY: ""
+  GEMINI_API_KEY: ""
+  ANYSCALE_API_KEY: ""
+  COHERE_API_KEY: ""
+  DEEPSEEK_API_KEY: ""
+  FIREWORKS_API_KEY: ""
+  GROQ_API_KEY: ""
+  HUGGINGFACE_TOKEN: ""
+  MISTRAL_API_KEY: ""
+  OPENROUTER_KEY: ""
+  PERPLEXITY_API_KEY: ""
+  TOGETHERAI_API_KEY: ""
+  XAI_API_KEY: ""
+  BEDROCK_AWS_DEFAULT_REGION: ""
+  BEDROCK_AWS_ACCESS_KEY_ID: ""
+  BEDROCK_AWS_SECRET_ACCESS_KEY: ""
+  PROXY: ""
+  OPENWEATHER_API_KEY: ""
+  {{- end }}

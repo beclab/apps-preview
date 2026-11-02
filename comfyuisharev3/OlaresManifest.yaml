@@ -6,7 +6,7 @@ metadata:
   description: The most powerful and modular stable diffusion GUI and backend.
   icon: https://app.cdn.olares.com/appstore/comfyui/icon2.png
   appid: comfyuisharev3
-  version: '1.1.35'
+  version: '1.1.40'
   title: ComfyUI
   categories:
   - Creativity
@@ -52,7 +52,7 @@ permission:
   - Home
 spec:
   onlyAdmin: true
-  versionName: '0.42.1'
+  versionName: '0.43.0'
   featuredImage: https://app.cdn.olares.com/appstore/comfyui/1.png
   promoteImage:
   - https://app.cdn.olares.com/appstore/comfyui/1.png
@@ -139,13 +139,13 @@ spec:
     - Input / output: `appCommon/comfyui/input` and `appCommon/comfyui/output`
 
   upgradeDescription: |
-    ComfyUI 0.42.1 adds MOSS-image and FLUX 3 Image support and fixes crashes in the MOSS image template workflow.
+    ComfyUI 0.43.0 adds Fibo 2.0 support and expands MOSS-Image editing controls.
 
-    - Add native LoRA stack loader nodes for loading multiple LoRAs in a workflow.
-    - Restore webcam node functionality.
-    - Fix crashes that some users encountered when running the MOSS image template workflow.
+    - Use LoRAs for MOSS-Image editing and adjust image strength and color depth.
+    - Pad images with mirrored edges or to dimensions that are multiples of a chosen value using the new Pad Image node.
+    - Use ACEScg for image color conversion and EXR export.
 
-    Release notes: [ComfyUI 0.40.0](https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.40.0) · [ComfyUI 0.41.0](https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.41.0) · [ComfyUI 0.42.0](https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.42.0) · [ComfyUI 0.42.1](https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.42.1)
+    Release notes: [ComfyUI 0.43.0](https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.43.0)
 
   developer: Comfy Org
   website: https://www.comfy.org/
@@ -187,6 +187,23 @@ spec:
     limitedMemory: 71Gi
     requiredDisk: 10Gi
     limitedDisk: 40Gi
+  # intel-gpu — discrete Intel Arc (Xe2 / Battlemage, e.g. Arc Pro B70 32GB).
+  # NOT the same as `intel`: that one is iGPU / unified memory and carries no
+  # GPU quota. A discrete card does have one, same as nvidia.
+  # Values must be concrete. A `-1` sentinel additionally requires the
+  # gpu.bytetrade.io/required-gpu-memory pod annotation, otherwise it parses as
+  # 0 and the card drops out of its own compute binding.
+  # Host memory follows the nvidia numbers: on a discrete card VRAM is a
+  # separate pool, so the process heap does not change.
+  - mode: intel-gpu
+    requiredCpu: 4000m
+    limitedCpu: 4500m
+    requiredMemory: 20Gi
+    limitedMemory: 71Gi
+    requiredDisk: 10Gi
+    limitedDisk: 40Gi
+    requiredGPUMemory: 2Gi
+    limitedGPUMemory: 28Gi
   supportArch:
   - amd64
   - arm64

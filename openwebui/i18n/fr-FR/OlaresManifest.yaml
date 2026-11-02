@@ -38,13 +38,12 @@ spec:
 
     - Mises à jour continues : Nous nous engageons à améliorer Open WebUI avec des mises à jour régulières, des correctifs et de nouvelles fonctionnalités.
   upgradeDescription: |
-    Chart **1.0.47** — Open WebUI **v0.12.0**.
-    - Appels vocaux en temps réel avec avatars 3D animés (configuration OpenAI Realtime requise).
-    - Connexion à deux facteurs avec applications d’authentification et codes de récupération.
-    - Les discussions partagées autorisent les réponses et affichent les auteurs et la saisie en temps réel.
-    - Skills avec plusieurs fichiers et import par URL ; historique des versions des skills, modèles, outils et fonctions.
-    - Explorateur de fichiers dans les bases de connaissances, avec aperçu des originaux et modification du texte extrait.
-    - Contrôles de modèles personnalisés, groupes imbriqués et modèles par défaut par groupe.
-    - Tool Search expérimental charge les définitions à la demande avec les appels de fonctions natifs.
-    - Correctifs de sécurité, de contrôle d’accès et de stabilité.
-    - https://github.com/open-webui/open-webui/releases/tag/v0.12.0
+    Chart **1.0.49** — Open WebUI **v0.12.4**.
+    - Met à jour Open WebUI de v0.12.3 vers v0.12.4. Cette version contient des correctifs de sécurité.
+    - Les skills sélectionnés peuvent se charger à la demande. La compaction du contexte s’affiche dans la conversation, résumé compris, et couvre aussi les conversations temporaires et les conversations courtes qui dépassent déjà la limite.
+    - Les administrateurs peuvent masquer des contrôles individuels. Les options sans effet restent masquées, et le partage se modifie dans les réglages Access.
+    - Un dossier peut ouvrir une nouvelle conversation. Plusieurs conversations de la barre latérale peuvent être sélectionnées, puis archivées ou supprimées ensemble. Les fichiers peuvent être téléchargés ou supprimés en lot, et un dossier peut avoir une description.
+    - Tant que Direct Integrations reste désactivé, les serveurs d’outils et les connexions Open Terminal enregistrés ne sont pas utilisés tant qu’un administrateur n’active pas Direct Integrations.
+    - Le conteneur exécute désormais Python 3.12 sur Debian 13. Les fonctions personnalisées et les paquets pip doivent être compatibles avec Python 3.12.
+    - Cette version n’ajoute pas de migration de schéma. Les comptes, conversations, dossiers, notes et fichiers des versions précédentes sont conservés. Le Chart sauvegarde toujours la base SQLite avant le démarrage d’une nouvelle version, utilise une réplique et la stratégie Recreate.
+    - https://github.com/open-webui/open-webui/releases/tag/v0.12.4

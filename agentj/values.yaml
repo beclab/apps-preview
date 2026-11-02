@@ -8,9 +8,9 @@ workloads:
 # New Agent J versions come as a new image + chart version (an app upgrade in Market); Agent J's own upgrades are off.
 image:
   repository: ghcr.io/preangelleo/agentj-olares
-  tag: 0.23.1a1
-  digest: "sha256:fd53f4b476ee58dc66888a13928926c648ad62dfc7d0293ac4bd2c149f162f12"
+  tag: 0.26.4a1
+  digest: "sha256:3b899bdcde55c859dc2d9d5573e283593aa9c994f7a5a0be33960ccbd531d1cc"
 agentj:
-  version: 0.23.1a1
-  wheelSha256: 151de497b1fb039a7daf532634bb55e36ead3f9890043f059f97f574a2821957
+  version: 0.26.4a1
+  wheelSha256: bf95c2a57e870bca2a7bd4d9f1f16d07c6576bfe9add8a5d847c60622d48ded2
   accountUrl: https://agentj.app/account

@@ -3,9 +3,7 @@ metadata:
   description: 用手机遥控 Olares 上运行的 AI 编程 Agent
 spec:
   upgradeDescription: |
-    - [all] 在当前获准的主人手机回合，用 agentj file show 把本地文件附到当前页；无有效主人回合会明确失败。
-    - [all] 回复中的完整本地图片引用可在回合进行中显示，继续执行工具时无需等到回复结束。
-    - [all] 图片准备和失败状态更清楚；排队或附到页面的回执不代表客户端已下载或主人已看到。
+    - [all] 本地报告预览免重复确认；素材邮件按原生任务和本人批准的固定名单发送。
   fullDescription: |
     **概述**
     Agent J 把你的手机连到运行在 Olares 上的 AI 编程 Agent。你在手机上发消息，Agent 在这台机器上干活；每一步有风险的操作，都要先在手机上经你批准。

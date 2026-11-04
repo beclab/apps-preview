@@ -3,9 +3,7 @@ metadata:
   description: A phone remote for the AI coding agent running on your Olares
 spec:
   upgradeDescription: |
-    - [all] Use agentj file show in an admitted owner phone turn to attach a local file to the current page; without a live owner turn it fails explicitly.
-    - [all] Complete local image references can appear while a turn is running, without waiting for tools and the reply to finish.
-    - [all] Image preparation and failure states are clearer. A queued or attached-to-page receipt does not mean the client downloaded the file or the owner saw it.
+    - [all] Preview local reports without repeated confirmation; send artifact mail through a native task and owner-approved fixed recipients.
   fullDescription: |
     **Overview**
     Agent J connects your phone to an AI coding agent running on your Olares. You send a message from the phone, the agent works on this machine, and every risky step waits for your approval on the phone.

@@ -1,0 +1,396 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: note
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: note
+spec:
+  # Exactly one: progress and collaboration events, the per-recording locks
+  # and the device recorder all live in this process's memory
+  # (internal/events, api recordingGate). A second replica would drop the
+  # events published on the other one and let two of them record at once.
+  replicas: {{ .Values.workloads.note.replicaCount }}
+  selector:
+    matchLabels:
+      app: note
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: note
+      annotations:
+        config.linkerd.io/skip-outbound-ports: "4222"
+        {{- if .Values.capture.bluetooth.enabled }}
+        # Pairing calls BlueZ over the host's system bus, which the runtime's
+        # default AppArmor profile forbids a container (hzydemo01: DENIED
+        # dbus_method_call). Unconfined lifts that one confinement; the
+        # container stays unprivileged. The annotation, not the securityContext
+        # field, so it holds on clusters older than Kubernetes 1.30.
+        container.apparmor.security.beta.kubernetes.io/note: unconfined
+        {{- end }}
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        {{- if .Values.capture.usb.enabled }}
+        supplementalGroups:
+          - {{ .Values.capture.usb.audioGroup }}
+        {{- end }}
+      initContainers:
+        # Olares grants the appData mount but does not hand over ownership of
+        # it, and kubelet creates a missing subPath as root. Each directory is
+        # chowned on its own: recursing has been observed to fail on
+        # subdirectories the app already created as uid 1000, which leaves the
+        # pod stuck initializing on upgrade.
+        - name: init-permissions
+          image: beclab/aboveos-busybox:1.37.0
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              for d in /data /data/meetings; do
+                mkdir -p "$d" && chown 1000:1000 "$d"
+              done
+          volumeMounts:
+            - name: app-data
+              mountPath: /data
+      containers:
+        - name: note
+          image: {{ .Values.image }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: external
+              containerPort: 8081
+            - name: agents
+              containerPort: 8082
+          {{- if .Values.capture.usb.enabled }}
+          # The device cgroup only lets a privileged container open the
+          # host's sound devices; the group above is what the file modes ask.
+          securityContext:
+            privileged: true
+          {{- end }}
+          env:
+            - name: NOTE_PORT
+              value: "8080"
+            {{- if or .Values.capture.usb.enabled .Values.capture.bluetooth.enabled }}
+            - name: NOTE_CAPTURE_ENABLED
+              value: "true"
+            # Without the USB switch nothing is mounted at /dev/snd, so there
+            # are no sound cards to look for.
+            - name: NOTE_CAPTURE_USB
+              value: {{ .Values.capture.usb.enabled | quote }}
+            {{- end }}
+            {{- if .Values.capture.bluetooth.enabled }}
+            - name: NOTE_CAPTURE_PULSE_SERVER
+              value: unix:/run/host-pulse/native
+            - name: NOTE_CAPTURE_SYSTEM_BUS
+              value: unix:path=/run/host-dbus/system_bus_socket
+            # Pairing goes to the host's Bluetooth helper while its socket is
+            # there; the system bus above is for a host an older Note set up.
+            - name: NOTE_CAPTURE_BT_HELPER
+              value: /run/host-bt/helper.sock
+            {{- end }}
+            {{- if .Values.devTools.perf.enabled }}
+            # Development performance records: on only in a preview
+            # installation. Absent, Note keeps none and the routes that
+            # report and read them answer 404.
+            - name: NOTE_PERF_DEV
+              value: "true"
+            {{- end }}
+            - name: NOTE_EXTERNAL_PORT
+              value: "8081"
+            # Read-only REST and MCP for apps in the cluster, behind the
+            # internal shared entrance (sharedentrances-note below).
+            - name: NOTE_AGENT_PORT
+              value: "8082"
+            # Where an API key's integrations reach that port: the note-api
+            # entrance's own label (app id and entrance index, as app-service
+            # names it), under the caller's zone as for Files below. The page
+            # cannot tell it reliably from the host it is served on.
+            {{- with index (.Values.domain | default dict) "note-api" }}
+            - name: NOTE_EXTERNAL_ORIGIN
+              value: {{ printf "https://%s.{user}.%s" (. | splitList "." | first) ($.Values.user.zone | splitList "." | rest | join ".") | quote }}
+            {{- end }}
+            - name: NOTE_DATA_DIR
+              value: /data
+            - name: TZ
+              value: Etc/UTC
+            # Router's shared gateway entrance is stable across users. The host
+            # is two rounds of md5, not one: appid = md5("router")[:8] = f3395cd5,
+            # then md5(appid + "shared")[:8] = 3a77b15d. Hashing "routershared"
+            # in one round yields 8a0b4a6e, which resolves nowhere.
+            # The app's own identity rides along as x-caller-appid.
+            - name: LLM_GATEWAY_URL
+              value: "http://3a77b15d.shared.olares.com/v1"
+            - name: OLARES_APP_ID
+              value: "note"
+            # A shared reinstall can preserve recordings while recreating the
+            # middleware database. Give orphan recovery a deterministic owner
+            # instead of leaving those recordings invisible when several users
+            # already exist in the Olares directory.
+            - name: NOTE_OWNER
+              value: {{ .Values.bfl.username | quote }}
+            - name: NOTE_CATALOG_EVENTS_NATS_URL
+              value: {{ printf "nats://nats.user-system-%s:4222" .Values.bfl.username | quote }}
+            - name: NOTE_CATALOG_EVENTS_NATS_USER
+              value: {{ printf "%s-note-catalog" .Release.Namespace | quote }}
+            - name: NOTE_CATALOG_EVENTS_NATS_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: note-nats
+                  key: password
+            - name: NOTE_CATALOG_EVENTS_SUBJECT
+              value: "router.catalog"
+            - name: NOTE_LLDAP_READONLY_URL
+              value: "http://lldap-provider-svc.os-framework:28080"
+            - name: NOTE_LLDAP_TOKEN_FILE
+              value: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+            - name: NOTE_LLDAP_NATS_URL
+              value: "nats://nats.os-platform:4222"
+            - name: NOTE_LLDAP_NATS_USER
+              value: {{ printf "%s-note-users" .Release.Namespace | quote }}
+            - name: NOTE_LLDAP_NATS_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: note-nats
+                  key: password
+            - name: NOTE_LLDAP_RESYNC_INTERVAL
+              value: "5m"
+            # Browser uploads land on this pod's volume. Files is still used
+            # to browse and import from the caller's Home, and for HLS.
+            # {user} is replaced from the authenticated caller so each user
+            # reaches their own Files entrance. The domain is the platform's,
+            # taken from the installing admin's zone: a caller on the LAN name
+            # arrives from <entrance>.<user>.olares.local, which resolves on
+            # their side of the network and nowhere in this cluster.
+            - name: NOTE_FILES_BASE_URL
+              value: {{ printf "https://files.{user}.%s" (.Values.user.zone | splitList "." | rest | join ".") | quote }}
+            # The directory app-data appears under in the user's Drive: the
+            # last element of the path app-service mounts, which is the name
+            # this app was installed under.
+            - name: NOTE_FILES_DRIVE_APP
+              value: {{ base .Values.userspace.appData | quote }}
+            - name: NOTE_CPU_WORKERS
+              value: {{ .Values.workers.cpu | quote }}
+            - name: NOTE_GPU_WORKERS
+              value: {{ .Values.workers.gpu | quote }}
+            - name: NOTE_DIAR_POSTPROCESS_STRATEGY
+              value: {{ .Values.diarization.postprocessStrategy | quote }}
+            - name: POSTGRES_HOST
+              value: {{ .Values.postgres.host | quote }}
+            - name: POSTGRES_PORT
+              value: {{ .Values.postgres.port | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.username | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgres.password | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.databases.note | quote }}
+          # Migrations run before the server listens, and some build indexes
+          # over every transcript turn: 100k turns took a minute on a laptop.
+          # A restart mid-migration rolls that file back and starts it again,
+          # so this waits up to an hour rather than two and a half minutes.
+          # Liveness only starts once this has passed.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 720
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+          volumeMounts:
+            - name: app-data
+              mountPath: /data
+            {{- if .Values.capture.usb.enabled }}
+            - name: sound
+              mountPath: /dev/snd
+            {{- end }}
+            {{- if .Values.capture.bluetooth.enabled }}
+            # The relay's socket, not the host's: see pulse-relay below.
+            - name: pulse-relay
+              mountPath: /run/host-pulse
+              readOnly: true
+            - name: host-dbus
+              mountPath: /run/host-dbus
+              # Connecting to the bus's socket needs no write to the mount.
+              readOnly: true
+            - name: host-bt
+              mountPath: /run/host-bt
+              # Connecting needs no write to the mount either.
+              readOnly: true
+            {{- end }}
+        {{- if .Values.capture.bluetooth.enabled }}
+        # Carries Note's pulse connections to the host's sound server. Note
+        # has to run as 1000, the uid Olares fixes for apps and owns the
+        # userspace volumes with; the sound server runs as the user the box
+        # was installed with (1000 on some boxes, 1001 on the Ubuntu images
+        # with a desktop) and listens in /run/user/<uid>/pulse, which libpulse
+        # sets back to 0700 whenever that user starts a client, so opening it
+        # from the host does not hold. Root with DAC_OVERRIDE enters it
+        # whatever its mode. This is how the platform's own Bluetooth sidecar
+        # re-exposes the system bus (app-service injectBluetooth). It is Note's
+        # own binary, so the image is the one already trusted to run as root.
+        # The relay finds the socket again for every connection, so a sound
+        # server that starts after Note, or restarts, needs no restart here.
+        - name: pulse-relay
+          image: {{ .Values.image }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          args:
+            - pulse-relay
+            - -listen
+            - /run/pulse-relay/native
+            - -root
+            - /host
+          securityContext:
+            runAsUser: 0
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            # DAC_OVERRIDE alone: entering the 0700 directory and connecting
+            # to the socket are permission checks it covers. The relay's own
+            # socket is created 0666 in a directory kubelet makes 0777, so
+            # neither CHOWN nor FOWNER is needed.
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - DAC_OVERRIDE
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: pulse-relay
+              mountPath: /run/pulse-relay
+            - name: host-olares-audio
+              mountPath: /host/run/olares-audio
+              readOnly: true
+            # HostToContainer: /run/user/<uid> is a tmpfs of its own, mounted
+            # when the user's session starts; a session that starts after Note,
+            # or comes back, shows up here only if host mounts propagate.
+            - name: host-run-user
+              mountPath: /host/run/user
+              readOnly: true
+              mountPropagation: HostToContainer
+        {{- end }}
+      volumes:
+        - name: app-data
+          hostPath:
+            path: {{ .Values.userspace.appData }}
+            type: DirectoryOrCreate
+        {{- if .Values.capture.usb.enabled }}
+        # Directory, not CharDevice: the cards come and go as the speakerphone
+        # is plugged in, and the directory is what stays. OrCreate, so a box
+        # with no sound card at all still starts Note: it lists no USB device,
+        # and one plugged in later appears in the directory the kernel uses.
+        - name: sound
+          hostPath:
+            path: /dev/snd
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if .Values.capture.bluetooth.enabled }}
+        # Where the relay listens and Note connects.
+        - name: pulse-relay
+          emptyDir: {}
+        # The host's audio setup links /run/olares-audio/pulse to the pulse
+        # directory of whichever user runs the sound server, so one package
+        # fits every box; the relay reads the link and connects under
+        # /run/user. Without the link it takes the one pulse socket under
+        # /run/user. The directories, not the socket: the server recreates the
+        # socket when the user's session restarts, and a mounted file would go
+        # stale. OrCreate, so a box not set up yet still starts Note; it just
+        # lists no Bluetooth devices until it is.
+        - name: host-olares-audio
+          hostPath:
+            path: /run/olares-audio
+            type: DirectoryOrCreate
+        - name: host-run-user
+          hostPath:
+            path: /run/user
+            type: DirectoryOrCreate
+        # The system bus, for pairing headsets through the host's BlueZ from
+        # the record dialog. The directory, for the same reason as above.
+        # OrCreate as well, now that Bluetooth is on by default: a host with no
+        # system bus still starts Note, which then finds no adapter.
+        - name: host-dbus
+          hostPath:
+            path: /run/dbus
+            type: DirectoryOrCreate
+        # The host's Bluetooth helper (olares-note-bt.socket, installed by the
+        # host audio job). The directory, as above: systemd makes the socket
+        # again when the unit restarts. OrCreate, so Note starts before the
+        # job has run; it asks again at each call.
+        - name: host-bt
+          hostPath:
+            path: /run/olares-audio/bt
+            type: DirectoryOrCreate
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: note-svc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: note
+spec:
+  selector:
+    app: note
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: external
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+---
+# The internal shared entrance: apps in the cluster reach the agent API at
+# http://7cb19ff3.shared.olares.com (md5(md5("note")[:8] + "shared")[:8])
+# through the app gateway, which verifies the caller's JWT and stamps
+# X-Caller-User and X-Caller-Appid, as they reach Router. Only the agent
+# listener is behind it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: sharedentrances-note
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: note
+spec:
+  selector:
+    app: note
+  ports:
+    - name: agents
+      port: 80
+      targetPort: 8082
+      protocol: TCP

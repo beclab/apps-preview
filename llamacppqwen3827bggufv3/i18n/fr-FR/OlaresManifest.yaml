@@ -3,12 +3,8 @@ metadata:
   title: Qwen3.8-27B (llama.cpp)
 spec:
   upgradeDescription: |
-    v1.0.21: Upgrade llama.cpp to server-cuda13-b12352 (from b11046). Highlights:
-    - Faster prompt processing for Qwen3.8 on NVIDIA GPUs with new chunked Gated DeltaNet CUDA kernels and more fused operations.
-    - More reliable MTP speculative decoding: draft state is saved and restored correctly, image prompts work with MTP, and drafts are verified with probabilistic sampling at non-zero temperatures.
-    - Context checkpoints are shared instead of copied, reducing memory use for parallel requests.
-    - The server exposes the reasoning effort levels (xhigh, medium, low) defined by the chat template.
-    - Security fixes for media URL handling, CORS, and DNS rebinding.
+    v1.0.23: Model Console (llm-init) v1.7.27-hf-progress.1.
+    - Corrige la progression du téléchargement lorsque les fichiers du modèle changent et améliore le redémarrage du moteur et les vérifications de disponibilité après le téléchargement du modèle mis à jour.
   fullDescription: |
     **Présentation du modèle**
     Qwen3.8-27B est un modèle vision-langage de la série Qwen (Alibaba), basé sur l'architecture Qwen3.5. Il prend en charge le raisonnement, l'appel d'outils et la compréhension native des images/vidéos, avec une fenêtre de contexte de 256K. Cette application sert la version GGUF `UD-Q4_K_XL` de `unsloth/Qwen3.8-27B-GGUF` via llama.cpp.

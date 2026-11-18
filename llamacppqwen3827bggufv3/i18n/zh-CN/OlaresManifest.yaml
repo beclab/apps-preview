@@ -4,12 +4,8 @@ metadata:
 
 spec:
   upgradeDescription: |
-    v1.0.21：升级 llama.cpp 至 server-cuda13-b12352（原 b11046）。主要更新：
-    - NVIDIA GPU 新增分块 Gated DeltaNet CUDA 内核，并融合更多算子，提升 Qwen3.8 的提示词处理速度。
-    - MTP 推测解码更可靠：正确保存和恢复草稿状态，支持图片输入，非零温度下使用概率采样校验草稿。
-    - 上下文检查点改为共享，不再整份复制，降低并行请求的内存占用。
-    - 服务端提供聊天模板定义的推理强度档位（xhigh、medium、low）。
-    - 修复媒体 URL、CORS 和 DNS 重绑定相关的安全问题。
+    v1.0.23: Model Console (llm-init) v1.7.27-hf-progress.1.
+    - 修复模型文件变化时的下载进度显示，改进更新模型下载完成后的引擎重启与就绪检查。
   fullDescription: |
     **模型简介**
     Qwen3.8-27B 是阿里巴巴 Qwen 系列的视觉语言模型，基于 Qwen3.5 架构，开箱即用支持思考、工具调用与原生图像/视频理解，上下文窗口 256K。本应用通过 llama.cpp 运行 `unsloth/Qwen3.8-27B-GGUF` 的 `UD-Q4_K_XL` GGUF 量化版本。

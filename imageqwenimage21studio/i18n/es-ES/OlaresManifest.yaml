@@ -19,4 +19,5 @@ spec:
 
     La optimización con IA necesita una app de modelo de chat instalada y disponible en Router. Sus instrucciones son el potenciador de prompts de Qwen-Image-2.1, tal como se incluye en las plantillas de flujos de trabajo de ComfyUI, bajo la Qwen Research License.
   upgradeDescription: |
-    Ahora es una app compartida: un administrador la instala una vez para todos en el Olares y cada persona solo ve su propia cola, sus subidas y sus resultados. Desinstala la versión anterior antes de instalar esta.
+    Los ajustes de Studio distinguen entre «Editar» y «Editar (rápido)» y explican cómo abrir un flujo de trabajo predefinido en ComfyUI. Los ajustes de notificaciones de resultados explican cuándo aparecen los avisos. Si hace falta, indican qué permisos del navegador o pasos de configuración se requieren.
+    Si actualizas desde una instalación individual, desinstala la versión anterior antes de instalar la versión compartida.

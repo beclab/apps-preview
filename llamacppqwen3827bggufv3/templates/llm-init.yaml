@@ -38,10 +38,7 @@
 {{- end -}}
 {{- end -}}
 {{- $modelSupports = join "," $expandedSupports -}}
-{{- $gpuType := .Values.gpu | default "" -}}
-{{- if not $gpuType -}}
-{{- $gpuType = .Values.GPU.Type | default "nvidia" -}}
-{{- end -}}
+{{- $gpuType := include "llamacppqwen3827bggufv3.gpuType" . -}}
 {{- /* The reasoning_effort levels this model's chat template accepts, and
        the one it uses when a request names none. llm-init turns these into
        the card's parameter rule, which is what Router publishes; unknown
@@ -56,6 +53,7 @@
 {{- $engineArgs = trim (printf "%s --embedding" $engineArgs) -}}
 {{- end -}}
 {{- $engineArgs = include "llamacppqwen3827bggufv3.engineArgs" (dict "Args" $engineArgs) -}}
+{{- $engineArgs = include "llamacppqwen3827bggufv3.platformArgs" (dict "Args" $engineArgs "Gpu" $gpuType) -}}
 {{- $logLevel := $oe.LOG_LEVEL | default "debug" -}}
 {{- $hfEndpoint := $oe.HF_ENDPOINT | default "" -}}
 {{- $hfToken := $oe.HF_TOKEN | default "" -}}
@@ -87,6 +85,10 @@ spec:
     spec:
       restartPolicy: Always
       volumes:
+        - name: legacy-run-state
+          hostPath:
+            path: "{{ .Values.userspace.appCache }}/llm-init-run/{{ .Release.Name }}"
+            type: DirectoryOrCreate
         - name: hf-cache
           hostPath:
             path: "{{ .Values.userspace.appCommon }}/huggingface"
@@ -94,10 +96,6 @@ spec:
         - name: run-state
           hostPath:
             path: "{{ $runStateHostPath }}"
-            type: DirectoryOrCreate
-        - name: legacy-run-state
-          hostPath:
-            path: "{{ .Values.userspace.appCache }}/llm-init-run/{{ .Release.Name }}"
             type: DirectoryOrCreate
       initContainers:
         - name: migrate-run-state
@@ -152,7 +150,7 @@ spec:
           # unless HF_ENABLE_XET=true); LFS streams each file to disk with a
           # bounded RAM footprint, avoiding the hf_xet OOM (huggingface_hub#3300).
           # v1.3.10 reads MODEL_REASONING_EFFORT.
-          image: beclab/llm-init:v1.7.27-hf-progress.1
+          image: docker.io/beclab/llm-init:v1.7.27-hf-progress.1
           imagePullPolicy: IfNotPresent
           env:
             - name: ENGINE_KIND

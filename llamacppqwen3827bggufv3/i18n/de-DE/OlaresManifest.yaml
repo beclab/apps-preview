@@ -1,11 +1,41 @@
 metadata:
-  description: "Qwen3.8-27B (GGUF UD-Q4_K_XL), bereitgestellt mit llama.cpp"
+  description: "Qwen3.8-27B (GGUF UD-Q4_K_XL), bereitgestellt mit llama.cpp. llm-init und die Inferenz-Engine teilen den Laufzeitstatus über Common und können auf unterschiedlichen Knoten ausgeführt werden."
   title: Qwen3.8-27B (llama.cpp)
 spec:
   upgradeDescription: |
-    v1.0.23: Model Console (llm-init) v1.7.27-hf-progress.1.
-    - Korrigiert die Download-Fortschrittsanzeige bei geänderten Modelldateien und verbessert den Engine-Neustart sowie die Bereitschaftsprüfung nach dem Download eines aktualisierten Modells.
+    **1.0.24**
+
+    - llm-init wurde auf v1.7.27-hf-progress.1 aktualisiert. Die Modellkarte bietet folgende Stufen für den Denkaufwand: `none`, `low`, `medium`, `xhigh`. Die Standardeinstellung ist `xhigh`.
+
+    v1.0.23: Der Laufzeitstatus wird in Common gespeichert, um den Betrieb über mehrere Knoten zu ermöglichen. Vorhandene Konfigurationen in Common haben Vorrang. Andernfalls wird der bisherige lokale Cache migriert oder der Status in Common initialisiert. Beim Start der Engine wird das Lesen gemeinsam genutzter Hilfsskripte bei Fehlern wiederholt.
+
+    v1.0.22: Model Console (llm-init) wurde auf v1.7.26 aktualisiert.
+
+    v1.0.21: Add Intel discrete GPU mode with server-intel-b11718; update the NVIDIA/Spark CUDA image to server-cuda13-b11718.
+
+    v1.0.18: Upgrade llama.cpp to server-cuda13-b11046. Raise the NVIDIA host-memory limit by 10Gi (engine 38Gi to 48Gi, chart limitedMemory 40Gi to 50Gi).
+
+    v1.0.17: Model Console (llm-init) wurde auf v1.7.21 aktualisiert.
+
+    v1.0.16: Model Console wird auf llm-init v1.7.19 aktualisiert.
+
+    v1.0.14: Upgrade llama.cpp to server-cuda13-b10920. Keep the shared 102K context pool, two slots, and MTP draft depth 2.
+
+    v1.0.13: Upgrade llama.cpp to server-cuda12-b10884 and set the default MTP draft depth to 2. Migrate exact previous presets while preserving custom engine arguments.
+
+    v1.0.5: Upgrade von llm-init auf v1.3.10; MODEL_REASONING_EFFORT und MODEL_REASONING_EFFORT_DEFAULT als nicht bearbeitbare Umgebungsvariablen festlegen; Upgrade von llama.cpp auf server-cuda12-b10548.
+
+    v1.0.4: Die von diesem Modell tatsächlich akzeptierten Reasoning-Stufen (low, medium, xhigh, Standard xhigh) auf seiner Modellkarte veröffentlichen, damit ein Client sie über Router lesen kann, statt sie zu erraten. Erfordert llm-init v1.3.10.
+
+    v1.0.3: Die NVIDIA-Hostspeicherreservierung verringern, damit 1.12.6 Timeslice-Knoten die Installation einfacher durchführen können (Engine-Anforderung von 21Gi auf 6Gi, chart requiredMemory von 23Gi auf 7Gi, ausreichend für den gemessenen Arbeitssatz von ~5.3Gi). Das GPU-Kontingent bleibt bei 23Gi.
+
+    v1.0.0: Erste Veröffentlichung. llama.cpp server-cuda12-b10454, llm-init v1.3.5. Unsloth Qwen3.8-27B UD-Q4_K_XL + mmproj, 102K Kontext (-c 104448), MTP --spec-draft-n-max 4, GPU-Kontingent 23Gi.
   fullDescription: |
+    **Intel acceleration**
+    - `intel-gpu`: Intel discrete GPU, 26Gi VRAM and 6Gi system-memory reservation (50Gi limit).
+    - Engine image: `beclab/ggml-org-llama.cpp:server-intel-b11718`.
+    - Intel preset: `-c 104448 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 -b 2048 -ub 2048 --spec-type draft-mtp --spec-draft-n-max 2 LLAMA_ARG_OVERRIDE_TENSOR=blk.14.ffn_down.weight=CPU -t 6 -tb 6`. Custom engine arguments are preserved.
+
     **Modellübersicht**
     Qwen3.8-27B ist ein Vision-Language-Modell aus der Qwen-Serie (Alibaba), das auf der Qwen3.5-Architektur basiert. Es unterstützt Denken, Tool-Aufrufe und natives Bild-/Videoverständnis mit einem Kontextfenster von 256K. Diese App stellt den `UD-Q4_K_XL`-GGUF-Build aus `unsloth/Qwen3.8-27B-GGUF` über llama.cpp bereit.
 
@@ -25,7 +55,7 @@ spec:
     Zunächst lädt Model Console das Modell herunter und bereitet es vor. Anschließend stellt `llama.cpp` das Modell bereit, sobald es fertig ist. Diese beiden Komponenten werden getrennt ausgeführt, nutzen aber gemeinsame Dateien und Fortschrittsinformationen.
 
     **Stack**
-    - **llama.cpp** (`server-cuda13-b12352`): Führt das Modell aus und stellt API-Anfragen bereit (Port 8081)
+    - **llama.cpp** (`server-cuda13-b11718`): Führt das Modell aus und stellt API-Anfragen bereit (Port 8081)
     - **Model Console**: Lädt das Modell herunter, zeigt den Fortschritt an und stellt die OpenAI API auf Port 8090 bereit, wobei Anfragen an `llamacpp` weitergeleitet werden.
 
     **Modellspeicher**

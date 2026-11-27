@@ -3,6 +3,16 @@ metadata:
   title: Qwen3.6-35B-A3B (llama.cpp)
 spec:
   upgradeDescription: |
+    **1.0.30**
+
+    - llm-init wurde auf v1.7.27-hf-progress.1 aktualisiert. Die Modellkarte bietet folgende Stufen für den Denkaufwand: `none`, `high`. Die Standardeinstellung ist `high`.
+
+    v1.0.29: Der Laufzeitstatus wird in Common gespeichert, um den Betrieb über mehrere Knoten zu ermöglichen. Vorhandene Konfigurationen in Common haben Vorrang. Andernfalls wird der bisherige lokale Cache migriert oder der Status in Common initialisiert. Beim Start der Engine wird das Lesen gemeinsam genutzter Hilfsskripte bei Fehlern wiederholt.
+
+    v1.0.28: Model Console (llm-init) wurde auf v1.7.26 aktualisiert.
+
+    v1.0.26: Intel-GPU-Modus `intel-gpu` (SYCL) mit 23Gi Grafikspeicher hinzugefügt.
+
     v1.0.24: Model Console (llm-init) wurde auf v1.7.21 aktualisiert.
 
     v1.0.23: Model Console wird auf llm-init v1.7.19 aktualisiert.
@@ -16,6 +26,7 @@ spec:
       und Slot-Anzahl, die die neu gestartete Engine tatsächlich aufgelöst hat. Zuvor
       tat das nur ein Neustart des Deployments.
     
+
     v1.0.15: llm-init v1.6.0 — dieses Preset nennt kein -np, und llama.cpps eigener
       Default dort sind 4 Slots, die einen KV-Pool teilen, nicht der einzelne Slot, den llm-init
       früher meldete. Die von Router beworbene Breite war daher falsch, und vier Slots
@@ -26,17 +37,26 @@ spec:
       wird jetzt auch gelesen, sodass Fenster und Slot-Anzahl von dem kommen, was sie aufgelöst
       hat, statt von dem, was die Flags implizierten.
     
+
     v1.0.13: NVIDIA-Hostspeicher-Reservierung gesenkt, damit 1.12.6 Timeslice-Knoten leichter installieren können (Engine-Request 21Gi→6Gi, Chart requiredMemory 22Gi→7Gi). GPU-Kontingent unverändert.
     
+
     v1.0.9: llama.cpp auf `server-cuda12-b10068` angehoben; HF_TOKEN via Secret + OLARES_SYSTEM_HUGGINGFACE_*.
     
+
     v1.0.8: `HF_TOKEN` in Kubernetes Secret (`secretKeyRef`) verschieben; HF-Env aus `OLARES_SYSTEM_HUGGINGFACE_*` mappen.
     
+
     v1.0.7: LLAMACPP_MEMORY_LIMIT 30Gi; llm-init Limit 2Gi; limitedMemory 32Gi (30+2).
+
     v1.0.6: nvidia Hostspeicher — requiredMemory 22Gi, LLAMACPP_MEMORY_REQUEST 21Gi, LLAMACPP_MEMORY_LIMIT 26Gi, limitedMemory 30Gi.
+
     v1.0.5: nvidia Hostspeicher — requiredMemory 16Gi, LLAMACPP_MEMORY_REQUEST 15Gi, LLAMACPP_MEMORY_LIMIT 19Gi, limitedMemory 26Gi.
+
     v1.0.4: llama.cpp auf server-cuda12-b10068 anheben.
+
     v1.0.4: llm-init auf v1.3.1 anheben.
+
     v1.0.4: nvidia requiredMemory=12Gi und LLAMACPP_MEMORY_REQUEST=11Gi angleichen (qwopus-Muster).
   fullDescription: |
     **Modellübersicht**
